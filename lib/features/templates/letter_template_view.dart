@@ -6,14 +6,26 @@ import '../../core/models/guide_geometry.dart';
 import '../../core/models/stroke.dart';
 import '../canvas/guide_lines.dart';
 import 'letter_templates.dart';
+import 'stroke_timeline.dart';
 
 /// Draws a letter template on guide lines with stroke-order hints: a
 /// numbered dot where each stroke starts and an arrow showing its direction.
 /// This is what a child sees to learn how a letter is written.
+///
+/// With [seconds] and [timeline], shows the letter part-way through the
+/// "watch" animation: a faint full letter underneath, finished strokes in
+/// ink, the current stroke growing with a pen dot at its tip.
 class LetterTemplateView extends StatelessWidget {
-  const LetterTemplateView({super.key, required this.template});
+  const LetterTemplateView({
+    super.key,
+    required this.template,
+    this.seconds,
+    this.timeline,
+  }) : assert(seconds == null || timeline != null);
 
   final LetterTemplate template;
+  final double? seconds;
+  final StrokeTimeline? timeline;
 
   @override
   Widget build(BuildContext context) {
@@ -22,6 +34,8 @@ class LetterTemplateView extends StatelessWidget {
       size: Size.infinite,
       painter: _TemplatePainter(
         template,
+        seconds: seconds,
+        timeline: timeline,
         ink: scheme.onSurface,
         hint: scheme.primary,
         onHint: scheme.onPrimary,
@@ -35,6 +49,8 @@ class LetterTemplateView extends StatelessWidget {
 class _TemplatePainter extends CustomPainter {
   _TemplatePainter(
     this.template, {
+    required this.seconds,
+    required this.timeline,
     required this.ink,
     required this.hint,
     required this.onHint,
@@ -43,7 +59,13 @@ class _TemplatePainter extends CustomPainter {
   });
 
   final LetterTemplate template;
+  final double? seconds;
+  final StrokeTimeline? timeline;
   final Color ink, hint, onHint, guide, zone;
+
+  bool get _animating => seconds != null;
+  double _drawn(int i) => _animating ? timeline!.drawn(i, seconds!) : 1;
+  bool _started(int i) => !_animating || timeline!.started(i, seconds!);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -63,37 +85,35 @@ class _TemplatePainter extends CustomPainter {
     Offset px(StrokePoint p) =>
         Offset(left + p.x * unit, g.baselineY + p.y * unit);
 
-    final inkPaint = Paint()
-      ..color = ink
-      ..strokeWidth = math.max(2, unit * 0.05)
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
+    final width = math.max(2.0, unit * 0.05);
     final strokes = template.drawing.strokes;
 
-    for (final s in strokes) {
-      if (s.points.length == 1) {
-        canvas.drawCircle(
-          px(s.start),
-          inkPaint.strokeWidth,
-          Paint()..color = ink,
-        );
-        continue;
+    if (_animating) {
+      final faint = ink.withValues(alpha: 0.15);
+      for (final s in strokes) {
+        _drawStroke(canvas, s, 1, px, faint, width);
       }
-      final path = Path()..moveTo(px(s.start).dx, px(s.start).dy);
-      for (final p in s.points.skip(1)) {
-        path.lineTo(px(p).dx, px(p).dy);
-      }
-      canvas.drawPath(path, inkPaint);
-      _arrow(canvas, s, px, unit);
     }
 
-    // Numbered start dots last, so they sit on top.
+    Offset? pen;
+    for (var i = 0; i < strokes.length; i++) {
+      final f = _drawn(i);
+      if (f == 0) continue;
+      final tip = _drawStroke(canvas, strokes[i], f, px, ink, width);
+      if (f == 1) {
+        _arrow(canvas, strokes[i], px, unit);
+      } else {
+        pen = tip;
+      }
+    }
+
+    // Numbered start dots on top, each appearing when its stroke starts.
     final r = math.max(7.0, unit * 0.07);
     final placed = <Offset>[];
     for (var i = 0; i < strokes.length; i++) {
       final c = _clearOf(placed, px(strokes[i].start), r);
       placed.add(c);
+      if (!_started(i)) continue;
       canvas.drawCircle(c, r, Paint()..color = hint);
       final label = TextPainter(
         text: TextSpan(
@@ -108,6 +128,59 @@ class _TemplatePainter extends CustomPainter {
       )..layout();
       label.paint(canvas, c - Offset(label.width / 2, label.height / 2));
     }
+
+    if (pen != null) {
+      canvas.drawCircle(pen, r * 0.9, Paint()..color = hint);
+      canvas.drawCircle(
+        pen,
+        r * 0.9,
+        Paint()
+          ..color = onHint
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2,
+      );
+    }
+  }
+
+  /// Draws the first [fraction] of [s] (by length); returns where it ends.
+  Offset _drawStroke(
+    Canvas canvas,
+    Stroke s,
+    double fraction,
+    Offset Function(StrokePoint) px,
+    Color color,
+    double width,
+  ) {
+    if (s.points.length == 1) {
+      canvas.drawCircle(px(s.start), width, Paint()..color = color);
+      return px(s.start);
+    }
+    final limit = s.length * fraction;
+    var travelled = 0.0;
+    var tip = px(s.start);
+    final path = Path()..moveTo(tip.dx, tip.dy);
+    for (var i = 1; i < s.points.length; i++) {
+      final seg = s.points[i - 1].distanceTo(s.points[i]);
+      if (travelled + seg >= limit) {
+        final t = seg == 0 ? 1.0 : (limit - travelled) / seg;
+        tip = Offset.lerp(px(s.points[i - 1]), px(s.points[i]), t)!;
+        path.lineTo(tip.dx, tip.dy);
+        break;
+      }
+      travelled += seg;
+      tip = px(s.points[i]);
+      path.lineTo(tip.dx, tip.dy);
+    }
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = color
+        ..strokeWidth = width
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
+    return tip;
   }
 
   /// Moves a badge away from earlier ones it would cover (e.g. "a", where the
@@ -133,6 +206,7 @@ class _TemplatePainter extends CustomPainter {
     Offset Function(StrokePoint) px,
     double unit,
   ) {
+    if (s.points.length < 2) return;
     final target = s.length * 0.6;
     var travelled = 0.0;
     for (var i = 1; i < s.points.length; i++) {
@@ -146,23 +220,24 @@ class _TemplatePainter extends CustomPainter {
       final normal = Offset(-dir.dy, dir.dx);
       final size = math.max(6.0, unit * 0.09);
       final tip = px(s.points[i]) + dir * size * 0.6;
-      final path = Path()
-        ..moveTo(tip.dx, tip.dy)
-        ..lineTo(
-          (tip - dir * size + normal * size * 0.6).dx,
-          (tip - dir * size + normal * size * 0.6).dy,
-        )
-        ..lineTo(
-          (tip - dir * size - normal * size * 0.6).dx,
-          (tip - dir * size - normal * size * 0.6).dy,
-        )
-        ..close();
-      canvas.drawPath(path, Paint()..color = hint);
+      final a = tip - dir * size + normal * size * 0.6;
+      final b = tip - dir * size - normal * size * 0.6;
+      canvas.drawPath(
+        Path()
+          ..moveTo(tip.dx, tip.dy)
+          ..lineTo(a.dx, a.dy)
+          ..lineTo(b.dx, b.dy)
+          ..close(),
+        Paint()..color = hint,
+      );
       return;
     }
   }
 
   @override
   bool shouldRepaint(_TemplatePainter old) =>
-      old.template != template || old.ink != ink || old.hint != hint;
+      old.template != template ||
+      old.seconds != seconds ||
+      old.ink != ink ||
+      old.hint != hint;
 }
