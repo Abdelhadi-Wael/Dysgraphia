@@ -1,12 +1,11 @@
 import 'dart:convert';
-import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/models/drawing_export.dart';
-import '../../core/models/stroke.dart';
 import '../export/drawing_exporter.dart';
+import '../templates/letter_templates.dart';
 import 'writing_canvas.dart';
 import 'writing_controller.dart';
 import 'writing_shortcuts.dart';
@@ -14,10 +13,13 @@ import 'writing_shortcuts.dart';
 /// Temporary developer screen for trying the canvas (week 1).
 /// Replaced by the real exercise screens later.
 class CanvasPlaygroundPage extends StatefulWidget {
-  const CanvasPlaygroundPage({super.key, this.exporter});
+  const CanvasPlaygroundPage({super.key, this.exporter, this.letter = 'o'});
 
   /// Where "Export JSON" saves; tests pass one that writes to a temp folder.
   final DrawingExporter? exporter;
+
+  /// Letter shown as the dotted trace guide (a key of [latinLowercase]).
+  final String letter;
 
   @override
   State<CanvasPlaygroundPage> createState() => _CanvasPlaygroundPageState();
@@ -28,23 +30,7 @@ class _CanvasPlaygroundPageState extends State<CanvasPlaygroundPage> {
   bool _showGhost = true;
   double _inkWidth = 0.06;
 
-  /// A sample "o": one counter-clockwise loop starting at the top right
-  /// (about 1-2 o'clock), the way it is taught in school. y grows downwards,
-  /// so increasing the angle moves up and over to the left.
-  /// Real templates arrive in the next step.
-  static final _sampleO = Drawing([
-    Stroke([
-      for (var i = 0; i <= 48; i++)
-        () {
-          final a = math.pi / 4 + i / 48 * 2 * math.pi;
-          return StrokePoint(
-            0.3 + 0.25 * math.cos(a),
-            -0.25 - 0.25 * math.sin(a),
-          );
-        }(),
-    ]),
-  ]);
-
+  late final _template = latinLowercase[widget.letter]!;
   late final _exporter = widget.exporter ?? DrawingExporter();
 
   @override
@@ -54,11 +40,11 @@ class _CanvasPlaygroundPageState extends State<CanvasPlaygroundPage> {
   }
 
   /// Saves the current drawing as JSON (see docs/stroke-format.md). With the
-  /// trace guide on, the target is recorded as "o".
+  /// trace guide on, the target is the letter being traced.
   Future<void> _export() async {
     final export = DrawingExport(
       drawing: _controller.drawing,
-      target: _showGhost ? 'o' : null,
+      target: _showGhost ? widget.letter : null,
     );
     final messenger = ScaffoldMessenger.of(context);
     try {
@@ -86,7 +72,7 @@ class _CanvasPlaygroundPageState extends State<CanvasPlaygroundPage> {
       controller: _controller,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Writing canvas'),
+          title: Text('Writing canvas: ${widget.letter}'),
           actions: [
             ListenableBuilder(
               listenable: _controller,
@@ -129,7 +115,7 @@ class _CanvasPlaygroundPageState extends State<CanvasPlaygroundPage> {
                   child: WritingCanvas(
                     key: const Key('writing-canvas'),
                     controller: _controller,
-                    ghost: _showGhost ? _sampleO : null,
+                    ghost: _showGhost ? _template.drawing : null,
                     inkWidth: _inkWidth,
                   ),
                 ),
