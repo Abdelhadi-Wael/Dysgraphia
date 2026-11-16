@@ -21,11 +21,16 @@ class LetterTemplateView extends StatelessWidget {
     required this.template,
     this.seconds,
     this.timeline,
+    this.showHints = true,
   }) : assert(seconds == null || timeline != null);
 
   final LetterTemplate template;
   final double? seconds;
   final StrokeTimeline? timeline;
+
+  /// Numbered start dots and direction arrows. Off for a clean model to
+  /// copy from.
+  final bool showHints;
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +41,7 @@ class LetterTemplateView extends StatelessWidget {
         template,
         seconds: seconds,
         timeline: timeline,
+        showHints: showHints,
         ink: scheme.onSurface,
         hint: scheme.primary,
         onHint: scheme.onPrimary,
@@ -51,6 +57,7 @@ class _TemplatePainter extends CustomPainter {
     this.template, {
     required this.seconds,
     required this.timeline,
+    required this.showHints,
     required this.ink,
     required this.hint,
     required this.onHint,
@@ -61,6 +68,7 @@ class _TemplatePainter extends CustomPainter {
   final LetterTemplate template;
   final double? seconds;
   final StrokeTimeline? timeline;
+  final bool showHints;
   final Color ink, hint, onHint, guide, zone;
 
   bool get _animating => seconds != null;
@@ -101,11 +109,12 @@ class _TemplatePainter extends CustomPainter {
       if (f == 0) continue;
       final tip = _drawStroke(canvas, strokes[i], f, px, ink, width);
       if (f == 1) {
-        _arrow(canvas, strokes[i], px, unit);
+        if (showHints) _arrow(canvas, strokes[i], px, unit);
       } else {
         pen = tip;
       }
     }
+    if (!showHints) return;
 
     // Numbered start dots on top, each appearing when its stroke starts.
     final r = math.max(7.0, unit * 0.07);
@@ -238,6 +247,7 @@ class _TemplatePainter extends CustomPainter {
   bool shouldRepaint(_TemplatePainter old) =>
       old.template != template ||
       old.seconds != seconds ||
+      old.showHints != showHints ||
       old.ink != ink ||
       old.hint != hint;
 }
