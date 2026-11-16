@@ -1,3 +1,4 @@
+import 'package:dysgraphia_app/features/exercises/trace/trace_view.dart';
 import 'package:dysgraphia_app/features/home/home_page.dart';
 import 'package:dysgraphia_app/features/templates/letter_gallery_page.dart';
 import 'package:dysgraphia_app/features/templates/letter_page.dart';
@@ -33,7 +34,8 @@ void main() {
 
     await tester.tap(find.text('Trace it'));
     await tester.pumpAndSettle();
-    expect(find.text('Writing canvas: g'), findsOneWidget);
+    expect(find.byType(TraceView), findsOneWidget);
+    expect(find.text('Start at dot 1 and follow the arrow'), findsOneWidget);
   });
 
   testWidgets('watch animation plays stroke by stroke and can replay', (
