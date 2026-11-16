@@ -101,6 +101,15 @@ class Drawing {
     return (minX, minY, maxX, maxY);
   }
 
+  /// The same drawing moved by (dx, dy) line units, e.g. to centre a letter.
+  Drawing shifted(double dx, double dy) => Drawing([
+    for (final s in strokes)
+      Stroke([
+        for (final p in s.points)
+          StrokePoint(p.x + dx, p.y + dy, t: p.t, pressure: p.pressure),
+      ]),
+  ]);
+
   Map<String, dynamic> toJson() => {
     'strokes': [for (final s in strokes) s.toJson()],
   };
