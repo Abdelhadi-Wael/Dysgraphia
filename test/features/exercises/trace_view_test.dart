@@ -66,9 +66,19 @@ void main() {
     expect(_message(tester), 'Well done!');
     expect(find.text('Trace again'), findsOneWidget);
 
+    // Traced exactly on the dotted letter: full marks.
+    expect(find.byKey(const Key('star-3-on')), findsOneWidget);
+    expect(find.text('Great job!'), findsOneWidget);
+    expect(find.text('Shape'), findsNothing);
+    await tester.tap(find.text('Details'));
+    await tester.pump();
+    expect(find.text('Shape'), findsOneWidget);
+    expect(find.text('100%'), findsNWidgets(4));
+
     await tester.tap(find.text('Trace again'));
     await tester.pump();
     expect(_message(tester), 'Start at dot 1 and follow the arrow');
+    expect(find.byKey(const Key('star-1-on')), findsNothing);
   });
 
   testWidgets('a line written upwards is rejected with a hint', (tester) async {

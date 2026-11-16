@@ -7,6 +7,8 @@ import '../../../core/models/stroke.dart';
 import '../../canvas/writing_canvas.dart';
 import '../../canvas/writing_controller.dart';
 import '../../canvas/writing_shortcuts.dart';
+import '../../scoring/letter_scorer.dart';
+import '../../scoring/score_card.dart';
 import '../../templates/letter_templates.dart';
 import 'trace_checker.dart';
 
@@ -153,6 +155,13 @@ class _TraceViewState extends State<TraceView>
               ),
             ],
           ),
+          if (_complete) ...[
+            const SizedBox(height: 8),
+            ScoreCard(
+              score: const LetterScorer().score(_controller.drawing, _shape),
+              hasDescender: _shape.bounds!.$4 > 0.2,
+            ),
+          ],
           const SizedBox(height: 12),
           Expanded(
             child: Center(
