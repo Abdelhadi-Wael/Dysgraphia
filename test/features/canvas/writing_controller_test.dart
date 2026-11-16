@@ -3,6 +3,7 @@ import 'package:dysgraphia_app/features/canvas/writing_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  rejectionTests();
   late WritingController c;
   setUp(() => c = WritingController());
 
@@ -112,5 +113,34 @@ void main() {
     c.addListener(() => calls++);
     line(0, 1, 0);
     expect(calls, greaterThanOrEqualTo(3));
+  });
+}
+
+void rejectionTests() {
+  test('rejected strokes are discarded without touching undo/redo', () {
+    var reject = false;
+    final c = WritingController(acceptStroke: (_) => !reject);
+    void line(double x, int t) {
+      c.beginStroke(StrokePoint(x, 0, t: t));
+      c.addPoint(StrokePoint(x + 0.5, 0, t: t + 10));
+      c.endStroke();
+    }
+
+    line(0, 0);
+    line(1, 100);
+    c.undo(); // one stroke left, one on the redo stack
+    reject = true;
+    c.beginStroke(const StrokePoint(5, 0, t: 200));
+    c.addPoint(const StrokePoint(5.5, 0, t: 210));
+    expect(c.endStroke(), isNull);
+    expect(c.drawing.strokeCount, 1);
+    expect(c.isWriting, isFalse);
+    expect(c.canRedo, isTrue, reason: 'redo history survives a rejection');
+    c.redo();
+    expect(c.drawing.strokeCount, 2);
+    c.undo();
+    c.undo();
+    expect(c.isEmpty, isTrue);
+    expect(c.canUndo, isFalse, reason: 'the rejected stroke left no entry');
   });
 }

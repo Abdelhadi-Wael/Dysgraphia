@@ -7,11 +7,15 @@ import '../../core/models/stroke.dart';
 ///
 /// Every change (adding a stroke, clearing) is undoable and redoable.
 class WritingController extends ChangeNotifier {
-  WritingController({this.minPointDistance = 0.004});
+  WritingController({this.minPointDistance = 0.004, this.acceptStroke});
 
   /// Points closer than this (line units) to the previous one are dropped,
   /// which removes jitter and keeps the data small.
   final double minPointDistance;
+
+  /// Called when the pen lifts. Returning false discards the stroke, e.g. a
+  /// traced stroke going the wrong way. Null accepts everything.
+  final bool Function(Stroke stroke)? acceptStroke;
 
   final List<Stroke> _strokes = [];
   List<StrokePoint>? _current;
@@ -51,12 +55,18 @@ class WritingController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Returns the finished stroke, or null if no stroke was in progress.
+  /// Returns the finished stroke, or null if no stroke was in progress or
+  /// [acceptStroke] rejected it.
   Stroke? endStroke() {
     final cur = _current;
     if (cur == null) return null;
     _current = null;
     final stroke = Stroke(cur);
+    if (acceptStroke?.call(stroke) == false) {
+      // Rejected: never part of the drawing, nothing to undo or redo.
+      notifyListeners();
+      return null;
+    }
     _strokes.add(stroke);
     _record(_AddStroke(stroke));
     notifyListeners();
