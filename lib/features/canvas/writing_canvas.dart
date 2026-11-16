@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/models/guide_geometry.dart';
 import '../../core/models/stroke.dart';
+import 'guide_lines.dart';
 import 'writing_controller.dart';
 
 /// A writing surface with handwriting guide lines.
@@ -141,7 +142,15 @@ class _WritingPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (showGuides) _paintGuides(canvas, size);
+    if (showGuides) {
+      paintGuideLines(
+        canvas,
+        size,
+        geometry,
+        guideColor: guideColor,
+        zoneColor: zoneColor,
+      );
+    }
 
     final g = ghost;
     if (g != null) {
@@ -168,46 +177,6 @@ class _WritingPainter extends CustomPainter {
       } else {
         canvas.drawPath(_path(s), ink);
       }
-    }
-  }
-
-  /// Standard handwriting-paper lines, all in one colour. Each style has one
-  /// meaning:
-  ///   * thin solid  → outer limits (top line, descender line)
-  ///   * dashed      → midline, the height of small letters
-  ///   * bold solid  → baseline, where every letter sits
-  /// The band between midline and baseline is lightly tinted: that is where
-  /// the body of every lowercase letter goes.
-  void _paintGuides(Canvas canvas, Size size) {
-    canvas.drawRect(
-      Rect.fromLTRB(0, geometry.midlineY, size.width, geometry.baselineY),
-      Paint()..color = zoneColor.withValues(alpha: 0.07),
-    );
-
-    final thin = Paint()
-      ..color = guideColor.withValues(alpha: 0.5)
-      ..strokeWidth = 1.5;
-    final bold = Paint()
-      ..color = guideColor.withValues(alpha: 0.9)
-      ..strokeWidth = 3;
-
-    void line(double y, Paint p) =>
-        canvas.drawLine(Offset(0, y), Offset(size.width, y), p);
-
-    line(geometry.topLineY, thin);
-    _dashedLine(canvas, geometry.midlineY, size.width, thin);
-    line(geometry.baselineY, bold);
-    line(geometry.descenderY, thin);
-  }
-
-  void _dashedLine(Canvas canvas, double y, double width, Paint paint) {
-    const dash = 10.0, gap = 8.0;
-    for (var x = 0.0; x < width; x += dash + gap) {
-      canvas.drawLine(
-        Offset(x, y),
-        Offset((x + dash).clamp(0, width), y),
-        paint,
-      );
     }
   }
 
