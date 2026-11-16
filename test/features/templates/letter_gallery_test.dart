@@ -1,5 +1,5 @@
 import 'package:dysgraphia_app/features/exercises/trace/trace_view.dart';
-import 'package:dysgraphia_app/features/home/home_page.dart';
+import 'package:dysgraphia_app/features/dev/dev_tools_page.dart';
 import 'package:dysgraphia_app/features/templates/letter_gallery_page.dart';
 import 'package:dysgraphia_app/features/templates/letter_page.dart';
 import 'package:dysgraphia_app/features/templates/letter_template_view.dart';
@@ -17,8 +17,8 @@ void main() {
     tester,
   ) async {
     _bigView(tester);
-    await tester.pumpWidget(const MaterialApp(home: HomePage()));
-    await tester.tap(find.text('Letter templates'));
+    await tester.pumpWidget(const MaterialApp(home: DevToolsPage()));
+    await tester.tap(find.text('Letter gallery'));
     await tester.pumpAndSettle();
 
     expect(find.byType(LetterGalleryPage), findsOneWidget);

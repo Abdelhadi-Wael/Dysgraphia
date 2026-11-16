@@ -8,7 +8,7 @@ import 'package:dysgraphia_app/features/assessment/assessment_result.dart';
 import 'package:dysgraphia_app/features/assessment/assessment_task.dart';
 import 'package:dysgraphia_app/features/canvas/writing_canvas.dart';
 import 'package:dysgraphia_app/features/export/drawing_exporter.dart';
-import 'package:dysgraphia_app/features/home/home_page.dart';
+import 'package:dysgraphia_app/features/dev/dev_tools_page.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -83,7 +83,7 @@ void main() {
     expect(g.unit, closeTo(100, 1e-9));
   });
 
-  testWidgets('full check: start screen, 4 tasks, one saved file', (
+  testWidgets('full check from developer tools: 4 tasks, one saved file', (
     tester,
   ) async {
     _tabletView(tester);
@@ -92,13 +92,13 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: HomePage(
+        home: DevToolsPage(
           exporter: DrawingExporter(baseDirectory: () async => tmp),
         ),
       ),
     );
     await tester.enterText(find.byType(TextField), ' P07 ');
-    await tester.tap(find.text('Start handwriting check'));
+    await tester.tap(find.text('Handwriting check without a profile'));
     await tester.pumpAndSettle();
 
     // Task 1: shapes, with a picture to copy and no guide lines.
@@ -156,7 +156,7 @@ void main() {
 
     await tester.tap(find.text('Back to start'));
     await tester.pumpAndSettle();
-    expect(find.text('Start handwriting check'), findsOneWidget);
+    expect(find.text('Developer tools'), findsOneWidget);
   });
 
   testWidgets('no participant code is saved as null', (tester) async {
