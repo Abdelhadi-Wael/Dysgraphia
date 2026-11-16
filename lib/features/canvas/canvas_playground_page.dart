@@ -1,8 +1,12 @@
+import 'dart:convert';
 import 'dart:math' as math;
 
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/models/drawing_export.dart';
 import '../../core/models/stroke.dart';
+import '../export/drawing_exporter.dart';
 import 'writing_canvas.dart';
 import 'writing_controller.dart';
 import 'writing_shortcuts.dart';
@@ -10,7 +14,10 @@ import 'writing_shortcuts.dart';
 /// Temporary developer screen for trying the canvas (week 1).
 /// Replaced by the real exercise screens later.
 class CanvasPlaygroundPage extends StatefulWidget {
-  const CanvasPlaygroundPage({super.key});
+  const CanvasPlaygroundPage({super.key, this.exporter});
+
+  /// Where "Export JSON" saves; tests pass one that writes to a temp folder.
+  final DrawingExporter? exporter;
 
   @override
   State<CanvasPlaygroundPage> createState() => _CanvasPlaygroundPageState();
@@ -38,10 +45,39 @@ class _CanvasPlaygroundPageState extends State<CanvasPlaygroundPage> {
     ]),
   ]);
 
+  late final _exporter = widget.exporter ?? DrawingExporter();
+
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  /// Saves the current drawing as JSON (see docs/stroke-format.md). With the
+  /// trace guide on, the target is recorded as "o".
+  Future<void> _export() async {
+    final export = DrawingExport(
+      drawing: _controller.drawing,
+      target: _showGhost ? 'o' : null,
+    );
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final file = await _exporter.save(export);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Saved to ${file.path}'),
+          duration: const Duration(seconds: 6),
+          action: SnackBarAction(
+            label: 'Copy JSON',
+            onPressed: () => Clipboard.setData(
+              ClipboardData(text: jsonEncode(export.toJson())),
+            ),
+          ),
+        ),
+      );
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Export failed: $e')));
+    }
   }
 
   @override
@@ -70,6 +106,11 @@ class _CanvasPlaygroundPageState extends State<CanvasPlaygroundPage> {
                     tooltip: 'Clear',
                     icon: const Icon(Icons.delete_outline),
                     onPressed: _controller.isEmpty ? null : _controller.clear,
+                  ),
+                  IconButton(
+                    tooltip: 'Export JSON',
+                    icon: const Icon(Icons.file_download_outlined),
+                    onPressed: _controller.drawing.isEmpty ? null : _export,
                   ),
                 ],
               ),
