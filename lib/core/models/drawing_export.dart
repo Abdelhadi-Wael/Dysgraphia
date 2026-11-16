@@ -1,3 +1,4 @@
+import '../utils/time.dart';
 import 'stroke.dart';
 
 /// The envelope a drawing travels in when it leaves the app: exported
@@ -7,10 +8,7 @@ class DrawingExport {
   /// [createdAt] is stored in UTC with millisecond precision, so it always
   /// serialises like `2026-11-17T10:22:31.123Z`.
   DrawingExport({required this.drawing, this.target, DateTime? createdAt})
-    : createdAt = DateTime.fromMillisecondsSinceEpoch(
-        (createdAt ?? DateTime.now()).millisecondsSinceEpoch,
-        isUtc: true,
-      );
+    : createdAt = utcMillis(createdAt ?? DateTime.now());
 
   static const format = 'dysgraphia-drawing';
   static const version = 1;

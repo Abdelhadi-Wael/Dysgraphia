@@ -20,18 +20,27 @@ class DrawingExporter {
 
   /// Writes [export] and returns the new file. File names look like
   /// `o_2026-11-17T10-22-31.123Z.json` (target, then UTC time).
-  Future<File> save(DrawingExport export) async {
+  Future<File> save(DrawingExport export) => saveJson(
+    fileStem(export.target ?? 'free', export.createdAt),
+    export.toJson(),
+  );
+
+  /// Writes any JSON document as `<stem>.json` and returns the file.
+  Future<File> saveJson(String stem, Map<String, dynamic> json) async {
     final dir = Directory('${(await _baseDirectory()).path}/$folderName');
     await dir.create(recursive: true);
-    final stamp = export.createdAt.toIso8601String().replaceAll(':', '-');
-    final file = File(
-      '${dir.path}/${_safe(export.target ?? 'free')}_$stamp.json',
-    );
-    await file.writeAsString(jsonEncode(export.toJson()));
+    final file = File('${dir.path}/$stem.json');
+    await file.writeAsString(jsonEncode(json));
     return file;
   }
 
-  static String _safe(String s) => s.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
+  /// `<prefix>_<UTC time>` with characters that are unsafe in file names
+  /// replaced by `_`.
+  static String fileStem(String prefix, DateTime createdAt) {
+    final safe = prefix.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
+    final stamp = createdAt.toUtc().toIso8601String().replaceAll(':', '-');
+    return '${safe}_$stamp';
+  }
 
   static Future<Directory> _defaultBaseDirectory() async {
     if (Platform.isAndroid) {
