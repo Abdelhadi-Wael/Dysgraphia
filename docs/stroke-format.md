@@ -1,4 +1,4 @@
-# Stroke format (`dysgraphia-drawing`, version 1)
+# Stroke format (`dysgraphia-drawing` and `dysgraphia-assessment`, version 1)
 
 How handwriting is stored and exchanged between the tablet app and any other
 part of the project (backend, scoring/AI service, dashboards). If you only
@@ -110,6 +110,51 @@ plt.title(f"target: {data['target']}")
 plt.show()
 ```
 
+## Assessment files (`dysgraphia-assessment`, version 1)
+
+A handwriting check (start screen → **Start handwriting check**) saves one
+file with every task, named `assessment_<participant>_<UTC time>.json`
+(`anon` when no code was entered), in the same `dysgraphia_exports` folder.
+Nothing is scored yet; the raw data is kept so it can be scored later.
+
+```json
+{
+  "format": "dysgraphia-assessment",
+  "version": 1,
+  "createdAt": "2026-11-17T09:12:44.501Z",
+  "participant": "P01",
+  "tasks": [
+    {
+      "id": "alphabet_a_m",
+      "instruction": "Write the small letters from a to m",
+      "target": "abcdefghijklm",
+      "startedAt": "2026-11-17T09:10:02.118Z",
+      "durationMs": 41250,
+      "skipped": false,
+      "drawing": {"strokes": [[{"x": 0.31, "y": -0.48, "t": 0, "p": 0.5}]]}
+    }
+  ]
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `participant` | A code like `P01` (never a real name), or `null`. Use it to match before/after checks of the same person. |
+| `tasks[].id` | Stable task id: `shapes`, `alphabet_a_m`, `alphabet_n_z`, `copy_sentence`. |
+| `tasks[].target` | What should be written. For `shapes`: `"circle cross square triangle"`. |
+| `tasks[].startedAt` | When the task appeared on screen. |
+| `tasks[].durationMs` | From the task appearing until the user pressed Next / Skip / Finish, so it includes thinking time before the first stroke. |
+| `tasks[].skipped` | `true` when nothing was written; `drawing.strokes` is then empty. |
+| `tasks[].drawing` | Exactly the `drawing` object described above (line units, `t` relative to the task's first point). |
+
+Notes:
+
+* The `shapes` task has no guide lines on screen, but coordinates still use
+  line units: the invisible baseline is where it would be.
+* The writing line is made smaller for long tasks so they fit the screen
+  width. Line units hide this, but very small lines may make writing
+  harder; keep it in mind when comparing tasks.
+
 ## Source of truth
 
 The Dart code that writes this format, if you need to check a detail:
@@ -117,6 +162,8 @@ The Dart code that writes this format, if you need to check a detail:
 * `lib/core/models/stroke.dart`: points, strokes, drawings
 * `lib/core/models/drawing_export.dart`: the envelope (`format`, `version`, …)
 * `lib/core/models/guide_geometry.dart`: pixels ↔ line units
+* `lib/features/assessment/assessment_result.dart`: assessment files
+* `lib/features/assessment/assessment_task.dart`: the tasks and their ids
 
 Any change to these files that changes the JSON must update this document,
 and a breaking change must bump `version`.
