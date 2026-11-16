@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../../core/models/stroke.dart';
 import '../../canvas/writing_canvas.dart';
 import '../../canvas/writing_controller.dart';
 import '../../canvas/writing_shortcuts.dart';
@@ -11,10 +12,25 @@ import '../../templates/letter_templates.dart';
 /// Copy a letter from a model, without dotted help, three times. Each
 /// attempt is checked on its own, so the tip can help the next one.
 class CopyView extends StatefulWidget {
-  const CopyView({super.key, required this.template, this.attempts = 3});
+  const CopyView({
+    super.key,
+    required this.template,
+    this.attempts = 3,
+    this.onChecked,
+    this.nextLabel,
+    this.onNext,
+  });
 
   final LetterTemplate template;
   final int attempts;
+
+  /// Called for every checked box with what was written and its score.
+  final void Function(Drawing drawing, LetterScore score)? onChecked;
+
+  /// When set, the finished view offers this as the main button (e.g.
+  /// "Next letter: d"), next to "Copy again".
+  final String? nextLabel;
+  final VoidCallback? onNext;
 
   /// Width / height of the model and of each writing box. They share the
   /// same guide lines and scale, so the model shows the right size too.
@@ -57,10 +73,12 @@ class _CopyViewState extends State<CopyView> {
   void _check() {
     final drawing = _boxes[_active].drawing;
     if (drawing.isEmpty) return;
+    final score = _scorer.score(drawing, widget.template.drawing);
     setState(() {
-      _scores[_active] = _scorer.score(drawing, widget.template.drawing);
+      _scores[_active] = score;
       _active++;
     });
+    widget.onChecked?.call(drawing, score);
   }
 
   void _again() {
@@ -224,11 +242,25 @@ class _CopyViewState extends State<CopyView> {
       return Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          FilledButton.icon(
-            onPressed: _again,
-            icon: const Icon(Icons.replay),
-            label: const Text('Copy again'),
-          ),
+          if (widget.onNext == null)
+            FilledButton.icon(
+              onPressed: _again,
+              icon: const Icon(Icons.replay),
+              label: const Text('Copy again'),
+            )
+          else ...[
+            OutlinedButton.icon(
+              onPressed: _again,
+              icon: const Icon(Icons.replay),
+              label: const Text('Copy again'),
+            ),
+            const SizedBox(width: 12),
+            FilledButton.icon(
+              onPressed: widget.onNext,
+              icon: const Icon(Icons.arrow_forward),
+              label: Text(widget.nextLabel ?? 'Next'),
+            ),
+          ],
         ],
       );
     }

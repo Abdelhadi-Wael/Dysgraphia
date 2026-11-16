@@ -20,11 +20,16 @@ class AssessmentPage extends StatefulWidget {
     this.participant,
     List<AssessmentTask>? tasks,
     this.exporter,
+    this.onSaved,
   }) : tasks = tasks ?? defaultAssessmentTasks;
 
   final String? participant;
   final List<AssessmentTask> tasks;
   final DrawingExporter? exporter;
+
+  /// Called once at the end with the result and the exported file (null if
+  /// writing the file failed).
+  final void Function(AssessmentResult result, File? file)? onSaved;
 
   @override
   State<AssessmentPage> createState() => _AssessmentPageState();
@@ -73,8 +78,9 @@ class _AssessmentPageState extends State<AssessmentPage> {
       tasks: _results,
       participant: widget.participant,
     );
+    File? file;
     try {
-      final file = await _exporter.saveJson(
+      file = await _exporter.saveJson(
         DrawingExporter.fileStem(
           'assessment_${widget.participant ?? 'anon'}',
           result.createdAt,
@@ -85,6 +91,7 @@ class _AssessmentPageState extends State<AssessmentPage> {
     } catch (e) {
       if (mounted) setState(() => _saveError = e);
     }
+    widget.onSaved?.call(result, file);
   }
 
   @override

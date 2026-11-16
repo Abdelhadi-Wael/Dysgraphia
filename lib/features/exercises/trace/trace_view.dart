@@ -17,12 +17,22 @@ import 'trace_checker.dart';
 /// * the line turns orange as soon as it goes wrong;
 /// * a wrong stroke fades away, so the child just tries it again.
 class TraceView extends StatefulWidget {
-  const TraceView({super.key, required this.template, this.onCopy});
+  const TraceView({
+    super.key,
+    required this.template,
+    this.onCopy,
+    this.onFinished,
+  });
 
   final LetterTemplate template;
 
   /// When set, a finished trace offers "Copy it" to move on.
   final VoidCallback? onCopy;
+
+  /// Called once each time the letter is completed, with what was written
+  /// (in canvas line units), its score and how many strokes were rejected.
+  final void Function(Drawing drawing, LetterScore score, int retries)?
+  onFinished;
 
   /// Width / height of the writing box.
   static const aspect = 1.2;
@@ -57,6 +67,9 @@ class _TraceViewState extends State<TraceView>
   Stroke? _rejected;
   var _mistakes = 0;
 
+  /// Score of the completed letter; null until it is complete.
+  LetterScore? _score;
+
   int get _accepted => _controller.drawing.strokeCount;
   bool get _complete => _checker.isComplete(_accepted);
 
@@ -77,6 +90,15 @@ class _TraceViewState extends State<TraceView>
     var live = TraceIssue.none;
     if (_controller.isWriting) {
       live = _checker.checkLive(_controller.strokes.last, _accepted).issue;
+    }
+    // Score once when the letter becomes complete; forget it if undo makes
+    // it incomplete again.
+    if (_complete && _score == null) {
+      final drawing = _controller.drawing;
+      _score = const LetterScorer().score(drawing, _shape);
+      widget.onFinished?.call(drawing, _score!, _mistakes);
+    } else if (!_complete) {
+      _score = null;
     }
     // Rebuild for the message; the canvas repaints by itself.
     setState(() => _live = live);
@@ -158,12 +180,9 @@ class _TraceViewState extends State<TraceView>
               ),
             ],
           ),
-          if (_complete) ...[
+          if (_complete && _score != null) ...[
             const SizedBox(height: 8),
-            ScoreCard(
-              score: const LetterScorer().score(_controller.drawing, _shape),
-              hasDescender: _shape.bounds!.$4 > 0.2,
-            ),
+            ScoreCard(score: _score!, hasDescender: _shape.bounds!.$4 > 0.2),
           ],
           const SizedBox(height: 12),
           Expanded(

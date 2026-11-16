@@ -1,7 +1,10 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/models/history.dart';
+import '../../core/models/stroke.dart';
 import '../exercises/copy/copy_view.dart';
 import '../exercises/trace/trace_view.dart';
+import '../scoring/letter_scorer.dart';
 import 'letter_template_view.dart';
 import 'letter_templates.dart';
 import 'stroke_timeline.dart';
@@ -15,10 +18,20 @@ class LetterPage extends StatefulWidget {
     super.key,
     required this.letter,
     this.initialStep = LetterStep.watch,
+    this.onAttempt,
+    this.queue = const [],
   });
 
   final String letter;
   final LetterStep initialStep;
+
+  /// Receives every finished trace and checked copy, e.g. to save it. The
+  /// page itself saves nothing.
+  final void Function(Attempt attempt)? onAttempt;
+
+  /// Letters to practise after this one (today's practice). When not
+  /// empty, finishing the copy step offers "Next letter".
+  final List<String> queue;
 
   @override
   State<LetterPage> createState() => _LetterPageState();
@@ -50,6 +63,33 @@ class _LetterPageState extends State<LetterPage>
     setState(() => _step = step);
     if (step == LetterStep.watch) _animation.forward(from: 0);
   }
+
+  void _report(
+    PracticeKind kind,
+    Drawing drawing,
+    LetterScore score, {
+    int retries = 0,
+  }) => widget.onAttempt?.call(
+    Attempt(
+      letter: widget.letter,
+      kind: kind,
+      stars: score.stars,
+      overall: score.overall,
+      score: score.toJson(),
+      retries: retries,
+      drawing: drawing,
+    ),
+  );
+
+  void _nextLetter() => Navigator.of(context).pushReplacement(
+    MaterialPageRoute<void>(
+      builder: (_) => LetterPage(
+        letter: widget.queue.first,
+        queue: widget.queue.sublist(1),
+        onAttempt: widget.onAttempt,
+      ),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -92,8 +132,18 @@ class _LetterPageState extends State<LetterPage>
           LetterStep.trace => TraceView(
             template: _template,
             onCopy: () => _go(LetterStep.copy),
+            onFinished: (drawing, score, retries) =>
+                _report(PracticeKind.trace, drawing, score, retries: retries),
           ),
-          LetterStep.copy => CopyView(template: _template),
+          LetterStep.copy => CopyView(
+            template: _template,
+            onChecked: (drawing, score) =>
+                _report(PracticeKind.copy, drawing, score),
+            nextLabel: widget.queue.isEmpty
+                ? null
+                : 'Next letter: ${widget.queue.first}',
+            onNext: widget.queue.isEmpty ? null : _nextLetter,
+          ),
         },
       ),
     );
