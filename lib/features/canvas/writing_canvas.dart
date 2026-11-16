@@ -22,9 +22,15 @@ class WritingCanvas extends StatefulWidget {
     this.showGuides = true,
     this.inkWidth = 0.06,
     this.onStrokeEnd,
+    this.inkColorOf,
   });
 
   final WritingController controller;
+
+  /// Optional colour per stroke (index into [WritingController.strokes],
+  /// which includes the stroke in progress); null means the normal ink.
+  /// Read at paint time, so it can reflect live checks while writing.
+  final Color? Function(int index, Stroke stroke)? inkColorOf;
 
   /// Template to trace over, in line units.
   final Drawing? ghost;
@@ -112,6 +118,7 @@ class _WritingCanvasState extends State<WritingCanvas> {
               guideColor: scheme.outline,
               zoneColor: scheme.primary,
               ghostColor: scheme.outline,
+              inkColorOf: widget.inkColorOf,
             ),
           ),
         );
@@ -131,6 +138,7 @@ class _WritingPainter extends CustomPainter {
     required this.guideColor,
     required this.zoneColor,
     required this.ghostColor,
+    this.inkColorOf,
   }) : super(repaint: controller);
 
   final WritingController controller;
@@ -139,6 +147,7 @@ class _WritingPainter extends CustomPainter {
   final bool showGuides;
   final double inkWidth;
   final Color inkColor, guideColor, zoneColor, ghostColor;
+  final Color? Function(int index, Stroke stroke)? inkColorOf;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -166,7 +175,10 @@ class _WritingPainter extends CustomPainter {
     }
 
     final ink = _inkPaint(inkColor, geometry.unit * inkWidth);
-    for (final s in controller.strokes) {
+    final strokes = controller.strokes;
+    for (var i = 0; i < strokes.length; i++) {
+      final s = strokes[i];
+      ink.color = inkColorOf?.call(i, s) ?? inkColor;
       if (s.points.length == 1) {
         canvas.drawCircle(
           geometry.toPixels(s.start),
