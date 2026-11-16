@@ -1,4 +1,4 @@
-import 'package:dysgraphia_app/app.dart';
+import 'package:dysgraphia_app/features/canvas/canvas_playground_page.dart';
 import 'package:dysgraphia_app/features/canvas/writing_canvas.dart';
 import 'package:dysgraphia_app/features/canvas/writing_controller.dart';
 import 'package:flutter/gestures.dart';
@@ -92,7 +92,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
 
-    await tester.pumpWidget(const DysgraphiaApp());
+    await tester.pumpWidget(const MaterialApp(home: CanvasPlaygroundPage()));
     final canvas = find.byKey(const Key('writing-canvas'));
     await _drag(tester, tester.getCenter(canvas), const Offset(100, 20));
     expect(find.textContaining('Strokes: 1'), findsOneWidget);
@@ -111,7 +111,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
 
-    await tester.pumpWidget(const DysgraphiaApp());
+    await tester.pumpWidget(const MaterialApp(home: CanvasPlaygroundPage()));
     await tester.pump();
     final canvas = find.byKey(const Key('writing-canvas'));
     await _drag(tester, tester.getCenter(canvas), const Offset(100, 20));

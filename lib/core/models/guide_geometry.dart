@@ -21,6 +21,10 @@ class GuideGeometry {
   /// Pixels per line unit.
   double get unit => size.height * (1 - topMargin - bottomMargin) / _zoneUnits;
 
+  /// Box height (default margins) that gives [unit] pixels per line unit.
+  static double heightForUnit(double unit) =>
+      unit * _zoneUnits / (1 - 0.12 - 0.08);
+
   double get topLineY => size.height * topMargin;
   double get baselineY => topLineY + unit;
   double get midlineY => baselineY - unit * 0.5;

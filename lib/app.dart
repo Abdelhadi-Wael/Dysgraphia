@@ -1,6 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
-import 'features/canvas/canvas_playground_page.dart';
+import 'features/home/home_page.dart';
 
 class DysgraphiaApp extends StatelessWidget {
   const DysgraphiaApp({super.key});
@@ -19,7 +19,7 @@ class DysgraphiaApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: theme(Brightness.light),
       darkTheme: theme(Brightness.dark),
-      home: const CanvasPlaygroundPage(),
+      home: const HomePage(),
     );
   }
 }
