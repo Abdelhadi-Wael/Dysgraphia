@@ -17,9 +17,12 @@ import 'trace_checker.dart';
 /// * the line turns orange as soon as it goes wrong;
 /// * a wrong stroke fades away, so the child just tries it again.
 class TraceView extends StatefulWidget {
-  const TraceView({super.key, required this.template});
+  const TraceView({super.key, required this.template, this.onCopy});
 
   final LetterTemplate template;
+
+  /// When set, a finished trace offers "Copy it" to move on.
+  final VoidCallback? onCopy;
 
   /// Width / height of the writing box.
   static const aspect = 1.2;
@@ -221,12 +224,21 @@ class _TraceViewState extends State<TraceView>
                   onPressed: _controller.isEmpty ? null : _restart,
                 ),
                 const Spacer(),
-                if (_complete)
-                  FilledButton.icon(
+                if (_complete) ...[
+                  OutlinedButton.icon(
                     onPressed: _restart,
                     icon: const Icon(Icons.replay),
                     label: const Text('Trace again'),
                   ),
+                  if (widget.onCopy != null) ...[
+                    const SizedBox(width: 12),
+                    FilledButton.icon(
+                      onPressed: widget.onCopy,
+                      icon: const Icon(Icons.arrow_forward),
+                      label: const Text('Copy it'),
+                    ),
+                  ],
+                ],
               ],
             ),
           ),

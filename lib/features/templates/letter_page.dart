@@ -1,17 +1,24 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../exercises/copy/copy_view.dart';
 import '../exercises/trace/trace_view.dart';
 import 'letter_template_view.dart';
 import 'letter_templates.dart';
 import 'stroke_timeline.dart';
 
-enum _Step { watch, trace }
+enum LetterStep { watch, trace, copy }
 
-/// One letter: watch it being written stroke by stroke, then trace it.
+/// One letter, in three steps: watch it being written, trace it over the
+/// dotted letter, then copy it from a model without help.
 class LetterPage extends StatefulWidget {
-  const LetterPage({super.key, required this.letter});
+  const LetterPage({
+    super.key,
+    required this.letter,
+    this.initialStep = LetterStep.watch,
+  });
 
   final String letter;
+  final LetterStep initialStep;
 
   @override
   State<LetterPage> createState() => _LetterPageState();
@@ -24,8 +31,14 @@ class _LetterPageState extends State<LetterPage>
   late final _animation = AnimationController(
     vsync: this,
     duration: _timeline.total,
-  )..forward();
-  var _step = _Step.watch;
+  );
+  late var _step = widget.initialStep;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_step == LetterStep.watch) _animation.forward();
+  }
 
   @override
   void dispose() {
@@ -33,9 +46,9 @@ class _LetterPageState extends State<LetterPage>
     super.dispose();
   }
 
-  void _watch() {
-    setState(() => _step = _Step.watch);
-    _animation.forward(from: 0);
+  void _go(LetterStep step) {
+    setState(() => _step = step);
+    if (step == LetterStep.watch) _animation.forward(from: 0);
   }
 
   @override
@@ -44,20 +57,43 @@ class _LetterPageState extends State<LetterPage>
       appBar: AppBar(
         title: Text('Letter ${widget.letter}'),
         actions: [
-          if (_step == _Step.trace)
-            TextButton.icon(
-              onPressed: _watch,
-              icon: const Icon(Icons.play_circle_outline),
-              label: const Text('Watch again'),
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: SegmentedButton<LetterStep>(
+              key: const Key('letter-steps'),
+              showSelectedIcon: false,
+              segments: const [
+                ButtonSegment(
+                  value: LetterStep.watch,
+                  icon: Icon(Icons.play_circle_outline),
+                  label: Text('Watch'),
+                ),
+                ButtonSegment(
+                  value: LetterStep.trace,
+                  icon: Icon(Icons.gesture),
+                  label: Text('Trace'),
+                ),
+                ButtonSegment(
+                  value: LetterStep.copy,
+                  icon: Icon(Icons.edit),
+                  label: Text('Copy'),
+                ),
+              ],
+              selected: {_step},
+              onSelectionChanged: (s) => _go(s.single),
             ),
-          const SizedBox(width: 8),
+          ),
         ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: switch (_step) {
-          _Step.watch => _buildWatch(context),
-          _Step.trace => TraceView(template: _template),
+          LetterStep.watch => _buildWatch(context),
+          LetterStep.trace => TraceView(
+            template: _template,
+            onCopy: () => _go(LetterStep.copy),
+          ),
+          LetterStep.copy => CopyView(template: _template),
         },
       ),
     );
@@ -97,8 +133,8 @@ class _LetterPageState extends State<LetterPage>
             ),
             const SizedBox(width: 12),
             FilledButton.icon(
-              onPressed: () => setState(() => _step = _Step.trace),
-              icon: const Icon(Icons.edit),
+              onPressed: () => _go(LetterStep.trace),
+              icon: const Icon(Icons.gesture),
               label: const Text('Trace it'),
             ),
           ],
