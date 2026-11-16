@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import '../assessment/assessment_page.dart';
 import '../canvas/canvas_playground_page.dart';
 import '../export/drawing_exporter.dart';
+import '../templates/letter_gallery_page.dart';
 
 /// Start screen. Simple for now; the real home (practice, progress) comes later.
 class HomePage extends StatefulWidget {
@@ -77,6 +78,15 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
                 child: const Text('Canvas test'),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const LetterGalleryPage(),
+                  ),
+                ),
+                child: const Text('Letter templates'),
               ),
             ],
           ),
