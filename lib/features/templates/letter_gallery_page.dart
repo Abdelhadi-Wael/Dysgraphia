@@ -1,10 +1,10 @@
 import 'package:material_ui/material_ui.dart';
 
-import '../canvas/canvas_playground_page.dart';
+import 'letter_page.dart';
 import 'letter_template_view.dart';
 import 'letter_templates.dart';
 
-/// All letter templates with their stroke order. Tap one to trace it.
+/// All letter templates with their stroke order. Tap one to watch and trace.
 /// Mainly for reviewing the templates; later reused for the "watch" step.
 class LetterGalleryPage extends StatelessWidget {
   const LetterGalleryPage({super.key});
@@ -32,7 +32,7 @@ class LetterGalleryPage extends StatelessWidget {
             child: InkWell(
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) => CanvasPlaygroundPage(letter: t.letter),
+                  builder: (_) => LetterPage(letter: t.letter),
                 ),
               ),
               child: Column(
