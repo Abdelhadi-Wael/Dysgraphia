@@ -87,26 +87,67 @@ class CheckRecord {
   );
 }
 
+/// A finished challenge on the writing journey.
+class ChallengeRecord {
+  ChallengeRecord({required this.number, required this.stars, DateTime? at})
+    : at = utcMillis(at ?? DateTime.now());
+
+  final int number;
+
+  /// Best copy stars for the challenge's new letter in that session.
+  final int stars;
+  final DateTime at;
+
+  Map<String, dynamic> toJson() => {
+    'number': number,
+    'stars': stars,
+    'at': at.toIso8601String(),
+  };
+
+  factory ChallengeRecord.fromJson(Map<String, dynamic> j) => ChallengeRecord(
+    number: (j['number'] as num).toInt(),
+    stars: (j['stars'] as num).toInt(),
+    at: DateTime.parse(j['at'] as String),
+  );
+}
+
 /// Everything one profile has done, oldest first.
 class History {
-  History({List<Attempt>? attempts, List<CheckRecord>? checks})
-    : attempts = List.unmodifiable(attempts ?? const []),
-      checks = List.unmodifiable(checks ?? const []);
+  History({
+    List<Attempt>? attempts,
+    List<CheckRecord>? checks,
+    List<ChallengeRecord>? challenges,
+  }) : attempts = List.unmodifiable(attempts ?? const []),
+       checks = List.unmodifiable(checks ?? const []),
+       challenges = List.unmodifiable(challenges ?? const []);
 
   static final empty = History();
 
   final List<Attempt> attempts;
   final List<CheckRecord> checks;
+  final List<ChallengeRecord> challenges;
 
-  History withAttempt(Attempt a) =>
-      History(attempts: [...attempts, a], checks: checks);
+  History _copy({
+    List<Attempt>? attempts,
+    List<CheckRecord>? checks,
+    List<ChallengeRecord>? challenges,
+  }) => History(
+    attempts: attempts ?? this.attempts,
+    checks: checks ?? this.checks,
+    challenges: challenges ?? this.challenges,
+  );
 
-  History withCheck(CheckRecord c) =>
-      History(attempts: attempts, checks: [...checks, c]);
+  History withAttempt(Attempt a) => _copy(attempts: [...attempts, a]);
+
+  History withCheck(CheckRecord c) => _copy(checks: [...checks, c]);
+
+  History withChallenge(ChallengeRecord c) =>
+      _copy(challenges: [...challenges, c]);
 
   Map<String, dynamic> toJson() => {
     'attempts': [for (final a in attempts) a.toJson()],
     'checks': [for (final c in checks) c.toJson()],
+    'challenges': [for (final c in challenges) c.toJson()],
   };
 
   factory History.fromJson(Map<String, dynamic> j) => History(
@@ -117,6 +158,10 @@ class History {
     checks: [
       for (final c in (j['checks'] as List? ?? const []))
         CheckRecord.fromJson(c as Map<String, dynamic>),
+    ],
+    challenges: [
+      for (final c in (j['challenges'] as List? ?? const []))
+        ChallengeRecord.fromJson(c as Map<String, dynamic>),
     ],
   );
 }
