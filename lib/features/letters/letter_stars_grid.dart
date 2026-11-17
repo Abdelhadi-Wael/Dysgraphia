@@ -3,7 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import '../templates/letter_template_view.dart';
 import '../templates/letter_templates.dart';
 
-/// All letters a-z with their best stars; tap one to open it.
+/// Letters (or warm-up shapes) with their best stars; tap one to open it.
 class LetterStarsGrid extends StatelessWidget {
   const LetterStarsGrid({
     super.key,
@@ -11,6 +11,7 @@ class LetterStarsGrid extends StatelessWidget {
     required this.onTap,
     this.highlight = const {},
     this.shrinkWrap = false,
+    this.templates,
   });
 
   /// Best stars per letter; letters not in the map are new.
@@ -21,11 +22,14 @@ class LetterStarsGrid extends StatelessWidget {
   final Set<String> highlight;
   final bool shrinkWrap;
 
+  /// What to show; all lowercase letters by default.
+  final List<LetterTemplate>? templates;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
-    final letters = latinLowercase.values.toList();
+    final letters = templates ?? latinLowercase.values.toList();
     return GridView.builder(
       shrinkWrap: shrinkWrap,
       physics: shrinkWrap ? const NeverScrollableScrollPhysics() : null,

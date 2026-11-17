@@ -6,6 +6,7 @@ import 'package:dysgraphia_app/core/models/stroke.dart';
 import 'package:dysgraphia_app/core/state/app_data.dart';
 import 'package:dysgraphia_app/core/storage/progress_store.dart';
 import 'package:dysgraphia_app/features/templates/letter_templates.dart';
+import 'package:dysgraphia_app/features/templates/warmup_shapes.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -62,6 +63,7 @@ Future<void> _tapText(WidgetTester tester, String text) async {
 }
 
 void main() {
+  warmUpTests();
   testWidgets('first launch to first stars', (tester) async {
     final store = MemoryStore();
     await _launch(tester, store);
@@ -164,5 +166,43 @@ void main() {
     await tester.pumpAndSettle();
     expect(store.profiles.map((p) => p.name), ['Sami']);
     expect(find.text("Who's practising?"), findsOneWidget);
+  });
+}
+
+void warmUpTests() {
+  testWidgets('warm-up: do them all, results saved separately', (tester) async {
+    final store = MemoryStore()..profiles = [Profile.create(name: 'Sami')];
+    await _launch(tester, store);
+    await tester.tap(find.text('Warm-up'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('letter-tile-warmup-circle')), findsOneWidget);
+
+    await tester.tap(find.text('Do them all'));
+    await tester.pumpAndSettle();
+    expect(find.text('Lines down'), findsOneWidget);
+    expect(find.text('Watch how to draw it'), findsOneWidget);
+
+    await tester.tap(find.text('Copy'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Look at the shape, then draw it in box 1'),
+      findsOneWidget,
+    );
+    final down = templateFor('warmup-down').drawing;
+    for (var box = 0; box < 3; box++) {
+      await _writeIn(tester, find.byKey(Key('copy-canvas-$box')), down);
+      await tester.tap(find.text('Check'));
+      await tester.pumpAndSettle();
+    }
+    expect(find.text('Next: Lines across'), findsOneWidget);
+
+    final h = store.histories[store.profiles.single.id]!;
+    expect(h.attempts.map((a) => a.letter).toSet(), {'warmup-down'});
+    // Back on Home, no letter counts as copied.
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.text('0 of 26 copied'), findsOneWidget);
   });
 }

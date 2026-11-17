@@ -6,6 +6,7 @@ import '../../core/models/profile.dart';
 import '../../core/state/app_data.dart';
 import '../assessment/assessment_page.dart';
 import '../letters/letters_page.dart';
+import '../letters/warmup_page.dart';
 import '../profiles/profile_avatar.dart';
 import '../progress/practice_plan.dart';
 import '../progress/progress_page.dart';
@@ -77,6 +78,12 @@ class HomePage extends ConsumerWidget {
               LayoutBuilder(
                 builder: (context, box) {
                   final tiles = [
+                    _Tile(
+                      icon: Icons.gesture,
+                      title: 'Warm-up',
+                      subtitle: 'Lines, circles, waves',
+                      onTap: () => push(const WarmUpPage()),
+                    ),
                     _Tile(
                       icon: Icons.abc,
                       title: 'Letters',
