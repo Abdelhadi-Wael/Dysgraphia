@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/widgets/fit_or_scroll.dart';
+
 import '../../core/models/history.dart';
 import '../../core/models/stroke.dart';
 import '../exercises/copy/copy_view.dart';
@@ -68,6 +70,7 @@ class _LetterPageState extends State<LetterPage> {
 
   @override
   Widget build(BuildContext context) {
+    final narrow = MediaQuery.sizeOf(context).width < 600;
     return Scaffold(
       appBar: AppBar(
         title: Text(_template.label),
@@ -77,21 +80,22 @@ class _LetterPageState extends State<LetterPage> {
             child: SegmentedButton<LetterStep>(
               key: const Key('letter-steps'),
               showSelectedIcon: false,
-              segments: const [
+              // Phones: words only, so the buttons fit next to the title.
+              segments: [
                 ButtonSegment(
                   value: LetterStep.watch,
-                  icon: Icon(Icons.play_circle_outline),
-                  label: Text('Watch'),
+                  icon: narrow ? null : const Icon(Icons.play_circle_outline),
+                  label: const Text('Watch'),
                 ),
                 ButtonSegment(
                   value: LetterStep.trace,
-                  icon: Icon(Icons.gesture),
-                  label: Text('Trace'),
+                  icon: narrow ? null : const Icon(Icons.gesture),
+                  label: const Text('Trace'),
                 ),
                 ButtonSegment(
                   value: LetterStep.copy,
-                  icon: Icon(Icons.edit),
-                  label: Text('Copy'),
+                  icon: narrow ? null : const Icon(Icons.edit),
+                  label: const Text('Copy'),
                 ),
               ],
               selected: {_step},
@@ -101,26 +105,30 @@ class _LetterPageState extends State<LetterPage> {
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: switch (_step) {
-          LetterStep.watch => WatchView(
-            template: _template,
-            onNext: () => _go(LetterStep.trace),
-          ),
-          LetterStep.trace => TraceView(
-            template: _template,
-            onNext: () => _go(LetterStep.copy),
-            onFinished: (drawing, score, retries) =>
-                _report(PracticeKind.trace, drawing, score, retries: retries),
-          ),
-          LetterStep.copy => CopyView(
-            template: _template,
-            onChecked: (drawing, score) =>
-                _report(PracticeKind.copy, drawing, score),
-            nextLabel: widget.queue.isEmpty ? null : _nextLabel,
-            onNext: widget.queue.isEmpty ? null : _nextLetter,
-          ),
-        },
+        padding: EdgeInsets.all(pagePadding(context)),
+        // Scrolls on short screens (phone in landscape).
+        child: FitOrScroll(
+          minHeight: 340,
+          child: switch (_step) {
+            LetterStep.watch => WatchView(
+              template: _template,
+              onNext: () => _go(LetterStep.trace),
+            ),
+            LetterStep.trace => TraceView(
+              template: _template,
+              onNext: () => _go(LetterStep.copy),
+              onFinished: (drawing, score, retries) =>
+                  _report(PracticeKind.trace, drawing, score, retries: retries),
+            ),
+            LetterStep.copy => CopyView(
+              template: _template,
+              onChecked: (drawing, score) =>
+                  _report(PracticeKind.copy, drawing, score),
+              nextLabel: widget.queue.isEmpty ? null : _nextLabel,
+              onNext: widget.queue.isEmpty ? null : _nextLetter,
+            ),
+          },
+        ),
       ),
     );
   }

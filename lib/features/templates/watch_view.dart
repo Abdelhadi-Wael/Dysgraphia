@@ -74,8 +74,11 @@ class _WatchViewState extends State<WatchView>
           ),
         ),
         const SizedBox(height: 12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
+        // Wraps onto two lines on narrow screens instead of overflowing.
+        Wrap(
+          alignment: WrapAlignment.end,
+          spacing: 12,
+          runSpacing: 8,
           children: [
             OutlinedButton.icon(
               onPressed: () {
@@ -85,7 +88,6 @@ class _WatchViewState extends State<WatchView>
               icon: const Icon(Icons.replay),
               label: const Text('Watch again'),
             ),
-            const SizedBox(width: 12),
             FilledButton.icon(
               onPressed: widget.onNext,
               icon: const Icon(Icons.arrow_forward),

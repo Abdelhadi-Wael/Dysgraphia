@@ -269,22 +269,28 @@ class _TraceViewState extends State<TraceView>
                   icon: const Icon(Icons.delete_outline),
                   onPressed: _controller.isEmpty ? null : _restart,
                 ),
-                const Spacer(),
-                if (_complete) ...[
-                  OutlinedButton.icon(
-                    onPressed: _restart,
-                    icon: const Icon(Icons.replay),
-                    label: const Text('Trace again'),
+                // Wraps onto two lines on narrow screens.
+                Expanded(
+                  child: Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: 12,
+                    runSpacing: 8,
+                    children: [
+                      if (_complete)
+                        OutlinedButton.icon(
+                          onPressed: _restart,
+                          icon: const Icon(Icons.replay),
+                          label: const Text('Trace again'),
+                        ),
+                      if (_complete && widget.onNext != null)
+                        FilledButton.icon(
+                          onPressed: widget.onNext,
+                          icon: const Icon(Icons.arrow_forward),
+                          label: Text(widget.nextLabel),
+                        ),
+                    ],
                   ),
-                  if (widget.onNext != null) ...[
-                    const SizedBox(width: 12),
-                    FilledButton.icon(
-                      onPressed: widget.onNext,
-                      icon: const Icon(Icons.arrow_forward),
-                      label: Text(widget.nextLabel),
-                    ),
-                  ],
-                ],
+                ),
               ],
             ),
           ),

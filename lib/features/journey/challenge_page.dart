@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/widgets/fit_or_scroll.dart';
+
 import '../../core/audio/app_audio.dart';
 import '../../core/models/history.dart';
 import '../exercises/copy/copy_view.dart';
@@ -115,17 +117,25 @@ class _ChallengePageState extends State<ChallengePage> {
           preferredSize: const Size.fromHeight(28),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            // On narrow screens the text shortens with "…" and the bar
+            // keeps at least 2/5 of the width.
             child: Row(
               children: [
-                Text(
-                  step.kind == _Kind.done
-                      ? 'Finished'
-                      : 'Step ${_index + 1} of $total · ${step.title}',
-                  key: const Key('challenge-step'),
-                  style: Theme.of(context).textTheme.labelLarge,
+                Flexible(
+                  flex: 3,
+                  child: Text(
+                    step.kind == _Kind.done
+                        ? 'Finished'
+                        : 'Step ${_index + 1} of $total · ${step.title}',
+                    key: const Key('challenge-step'),
+                    style: Theme.of(context).textTheme.labelLarge,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 Expanded(
+                  flex: 2,
                   child: LinearProgressIndicator(
                     value: _index / total,
                     minHeight: 6,
@@ -138,9 +148,13 @@ class _ChallengePageState extends State<ChallengePage> {
         ),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(pagePadding(context)),
         // Keyed by step, so two steps of the same kind never share state.
-        child: KeyedSubtree(key: ValueKey(_index), child: _body(step)),
+        // Scrolls on short screens (phone in landscape).
+        child: FitOrScroll(
+          minHeight: 340,
+          child: KeyedSubtree(key: ValueKey(_index), child: _body(step)),
+        ),
       ),
     );
   }

@@ -6,6 +6,8 @@ import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/widgets/fit_or_scroll.dart';
+
 import '../../core/models/guide_geometry.dart';
 import '../canvas/drawing_preview.dart';
 import '../canvas/writing_canvas.dart';
@@ -130,8 +132,11 @@ class _AssessmentPageState extends State<AssessmentPage> {
         ),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: _finished ? _buildSummary(context) : _buildTask(context),
+        padding: EdgeInsets.all(pagePadding(context)),
+        child: _finished
+            ? _buildSummary(context)
+            // Scrolls on short screens (phone in landscape).
+            : FitOrScroll(minHeight: 340, child: _buildTask(context)),
       ),
     );
   }

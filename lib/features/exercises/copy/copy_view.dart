@@ -254,8 +254,11 @@ class _CopyViewState extends State<CopyView> {
 
   Widget _buttons() {
     if (_finished) {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.end,
+      // Wraps onto two lines on narrow screens.
+      return Wrap(
+        alignment: WrapAlignment.end,
+        spacing: 12,
+        runSpacing: 8,
         children: [
           if (widget.onNext == null)
             FilledButton.icon(
@@ -269,7 +272,6 @@ class _CopyViewState extends State<CopyView> {
               icon: const Icon(Icons.replay),
               label: const Text('Copy again'),
             ),
-            const SizedBox(width: 12),
             FilledButton.icon(
               onPressed: widget.onNext,
               icon: const Icon(Icons.arrow_forward),
