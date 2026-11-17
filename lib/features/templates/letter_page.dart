@@ -108,7 +108,11 @@ class _LetterPageState extends State<LetterPage> {
         padding: EdgeInsets.all(pagePadding(context)),
         // Scrolls on short screens (phone in landscape).
         child: FitOrScroll(
-          minHeight: 340,
+          minHeight: switch (_step) {
+            LetterStep.watch => ExerciseHeights.watch,
+            LetterStep.trace => ExerciseHeights.trace,
+            LetterStep.copy => ExerciseHeights.copy,
+          },
           child: switch (_step) {
             LetterStep.watch => WatchView(
               template: _template,

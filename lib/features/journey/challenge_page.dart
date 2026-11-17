@@ -152,7 +152,11 @@ class _ChallengePageState extends State<ChallengePage> {
         // Keyed by step, so two steps of the same kind never share state.
         // Scrolls on short screens (phone in landscape).
         child: FitOrScroll(
-          minHeight: 340,
+          minHeight: switch (step.kind) {
+            _Kind.watch || _Kind.done => ExerciseHeights.watch,
+            _Kind.warmUp || _Kind.trace => ExerciseHeights.trace,
+            _Kind.copy || _Kind.review => ExerciseHeights.copy,
+          },
           child: KeyedSubtree(key: ValueKey(_index), child: _body(step)),
         ),
       ),

@@ -22,6 +22,16 @@ class FitOrScroll extends StatelessWidget {
   );
 }
 
+/// Smallest heights at which each kind of exercise still works without
+/// scrolling (writing boxes stay big enough to write in). Below them the
+/// page scrolls; see [FitOrScroll].
+abstract final class ExerciseHeights {
+  static const watch = 240.0;
+  static const trace = 280.0;
+  static const copy = 360.0;
+  static const check = 340.0;
+}
+
 /// Padding around exercise screens: less on short screens (a phone in
 /// landscape), where every pixel of height goes to the writing box.
 double pagePadding(BuildContext context) =>

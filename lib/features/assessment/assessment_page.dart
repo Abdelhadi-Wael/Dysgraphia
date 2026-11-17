@@ -136,7 +136,10 @@ class _AssessmentPageState extends State<AssessmentPage> {
         child: _finished
             ? _buildSummary(context)
             // Scrolls on short screens (phone in landscape).
-            : FitOrScroll(minHeight: 340, child: _buildTask(context)),
+            : FitOrScroll(
+                minHeight: ExerciseHeights.check,
+                child: _buildTask(context),
+              ),
       ),
     );
   }
