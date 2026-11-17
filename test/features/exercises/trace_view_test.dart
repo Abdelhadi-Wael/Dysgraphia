@@ -70,10 +70,15 @@ void main() {
     expect(find.byKey(const Key('star-3-on')), findsOneWidget);
     expect(find.text('Great job!'), findsOneWidget);
     expect(find.text('Shape'), findsNothing);
+    // Details open in a panel from the bottom; the card keeps its height.
+    final card = tester.getRect(find.byKey(const Key('score-tip')));
     await tester.tap(find.text('Details'));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.text('Shape'), findsOneWidget);
     expect(find.text('100%'), findsNWidgets(4));
+    expect(tester.getRect(find.byKey(const Key('score-tip'))), card);
+    Navigator.of(tester.element(find.text('Shape'))).pop();
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('Trace again'));
     await tester.pump();

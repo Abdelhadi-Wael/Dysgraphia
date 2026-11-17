@@ -29,64 +29,83 @@ class ScoreCard extends StatefulWidget {
         ScoreTip.strokeCount => 'Lift your pen like in the animation',
       };
 
+  /// Height of the card's content; with the card's margins the card takes
+  /// [height] + 8, always.
+  static const height = 56.0;
+
   @override
   State<ScoreCard> createState() => _ScoreCardState();
 }
 
 class _ScoreCardState extends State<ScoreCard> {
-  var _details = false;
+  /// The breakdown opens in a panel from the bottom, so the card itself
+  /// never changes height and nothing around it moves.
+  void _showDetails() {
+    final s = widget.score;
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                ScoreCard.tipText(s.tip, hasDescender: widget.hasDescender),
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 12),
+              _bar(context, 'Shape', s.shape),
+              _bar(context, 'Size', s.size),
+              _bar(context, 'On the line', s.position),
+              _bar(context, 'Strokes', s.strokes),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final s = widget.score;
     final text = Theme.of(context).textTheme;
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                for (var i = 1; i <= 3; i++)
-                  Icon(
-                    i <= s.stars
-                        ? Icons.star_rounded
-                        : Icons.star_border_rounded,
-                    key: Key('star-$i-${i <= s.stars ? 'on' : 'off'}'),
-                    color: Colors.amber.shade600,
-                    size: 36,
-                  ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    ScoreCard.tipText(s.tip, hasDescender: widget.hasDescender),
-                    key: const Key('score-tip'),
-                    style: text.titleMedium,
-                  ),
+      child: SizedBox(
+        height: ScoreCard.height,
+        child: Padding(
+          padding: const EdgeInsets.only(left: 12, right: 4),
+          child: Row(
+            children: [
+              for (var i = 1; i <= 3; i++)
+                Icon(
+                  i <= s.stars ? Icons.star_rounded : Icons.star_border_rounded,
+                  key: Key('star-$i-${i <= s.stars ? 'on' : 'off'}'),
+                  color: Colors.amber.shade600,
+                  size: 30,
                 ),
-                TextButton(
-                  onPressed: () => setState(() => _details = !_details),
-                  child: Text(_details ? 'Hide details' : 'Details'),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  ScoreCard.tipText(s.tip, hasDescender: widget.hasDescender),
+                  key: const Key('score-tip'),
+                  style: text.titleSmall,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ],
-            ),
-            if (_details) ...[
-              const SizedBox(height: 8),
-              _bar(context, 'Shape', s.shape),
-              _bar(context, 'Size', s.size),
-              _bar(context, 'On the line', s.position),
-              _bar(context, 'Strokes', s.strokes),
-              const SizedBox(height: 4),
+              ),
+              TextButton(onPressed: _showDetails, child: const Text('Details')),
             ],
-          ],
+          ),
         ),
       ),
     );
   }
 
   Widget _bar(BuildContext context, String label, double value) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 3),
+    padding: const EdgeInsets.symmetric(vertical: 4),
     child: Row(
       children: [
         SizedBox(width: 110, child: Text(label)),
