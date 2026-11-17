@@ -42,6 +42,24 @@ class SettingsPage extends ConsumerWidget {
             title: const Text('Edit profile'),
             onTap: () => push(ProfileFormPage(profile: p)),
           ),
+          SwitchListTile(
+            key: const Key('me-read-aloud'),
+            secondary: const Icon(Icons.record_voice_over_outlined),
+            title: const Text('Read instructions aloud'),
+            value: p.readAloud,
+            onChanged: (v) => ref
+                .read(appDataProvider.notifier)
+                .updateProfile(p.copyWith(readAloud: v)),
+          ),
+          SwitchListTile(
+            key: const Key('me-sounds'),
+            secondary: const Icon(Icons.music_note_outlined),
+            title: const Text('Sounds'),
+            value: p.sounds,
+            onChanged: (v) => ref
+                .read(appDataProvider.notifier)
+                .updateProfile(p.copyWith(sounds: v)),
+          ),
           ListTile(
             leading: const Icon(Icons.assignment_outlined),
             title: const Text('Writing check'),

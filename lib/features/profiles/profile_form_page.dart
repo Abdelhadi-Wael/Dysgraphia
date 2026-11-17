@@ -23,6 +23,8 @@ class _ProfileFormPageState extends ConsumerState<ProfileFormPage> {
   late var _avatar = widget.profile?.avatar ?? 0;
   late var _mode = widget.profile?.mode ?? ProfileMode.kid;
   late var _hand = widget.profile?.hand ?? Hand.right;
+  late var _readAloud = widget.profile?.readAloud ?? true;
+  late var _sounds = widget.profile?.sounds ?? true;
   String? _nameError;
   var _saving = false;
 
@@ -53,6 +55,8 @@ class _ProfileFormPageState extends ConsumerState<ProfileFormPage> {
           mode: _mode,
           hand: _hand,
           researchCode: () => code.isEmpty ? null : code,
+          readAloud: _readAloud,
+          sounds: _sounds,
         ),
       );
     } else {
@@ -63,6 +67,8 @@ class _ProfileFormPageState extends ConsumerState<ProfileFormPage> {
           mode: _mode,
           hand: _hand,
           researchCode: code.isEmpty ? null : code,
+          readAloud: _readAloud,
+          sounds: _sounds,
         ),
       );
     }
@@ -180,7 +186,12 @@ class _ProfileFormPageState extends ConsumerState<ProfileFormPage> {
                   ),
                 ],
                 selected: {_mode},
-                onSelectionChanged: (s) => setState(() => _mode = s.single),
+                onSelectionChanged: (s) => setState(() {
+                  _mode = s.single;
+                  // New profiles: children usually need instructions read
+                  // aloud, adults usually don't. Editing keeps the choice.
+                  if (!_editing) _readAloud = _mode == ProfileMode.kid;
+                }),
               ),
               const SizedBox(height: 24),
               Text('Writing hand', style: text.titleSmall),
@@ -192,6 +203,23 @@ class _ProfileFormPageState extends ConsumerState<ProfileFormPage> {
                 ],
                 selected: {_hand},
                 onSelectionChanged: (s) => setState(() => _hand = s.single),
+              ),
+              const SizedBox(height: 16),
+              SwitchListTile(
+                key: const Key('profile-read-aloud'),
+                contentPadding: EdgeInsets.zero,
+                secondary: const Icon(Icons.record_voice_over_outlined),
+                title: const Text('Read instructions aloud'),
+                value: _readAloud,
+                onChanged: (v) => setState(() => _readAloud = v),
+              ),
+              SwitchListTile(
+                key: const Key('profile-sounds'),
+                contentPadding: EdgeInsets.zero,
+                secondary: const Icon(Icons.music_note_outlined),
+                title: const Text('Sounds'),
+                value: _sounds,
+                onChanged: (v) => setState(() => _sounds = v),
               ),
               const SizedBox(height: 8),
               // Most people never need this, so it starts folded away

@@ -15,8 +15,11 @@ class Profile {
     this.mode = ProfileMode.kid,
     this.hand = Hand.right,
     this.researchCode,
+    bool? readAloud,
+    this.sounds = true,
     DateTime? createdAt,
-  }) : createdAt = utcMillis(createdAt ?? DateTime.now());
+  }) : readAloud = readAloud ?? mode == ProfileMode.kid,
+       createdAt = utcMillis(createdAt ?? DateTime.now());
 
   /// Creates a profile with a fresh random id.
   factory Profile.create({
@@ -25,6 +28,8 @@ class Profile {
     ProfileMode mode = ProfileMode.kid,
     Hand hand = Hand.right,
     String? researchCode,
+    bool? readAloud,
+    bool sounds = true,
   }) => Profile(
     id: newId(),
     name: name,
@@ -32,6 +37,8 @@ class Profile {
     mode: mode,
     hand: hand,
     researchCode: researchCode,
+    readAloud: readAloud,
+    sounds: sounds,
   );
 
   final String id;
@@ -47,6 +54,13 @@ class Profile {
   /// Optional code like "P01" used in exported files instead of the name,
   /// so research data never contains real names.
   final String? researchCode;
+
+  /// Read instructions and tips aloud. On by default for children, who may
+  /// not read yet; off by default for adults.
+  final bool readAloud;
+
+  /// Play sound effects (stars, finishing, a gentle "try again").
+  final bool sounds;
   final DateTime createdAt;
 
   Profile copyWith({
@@ -55,6 +69,8 @@ class Profile {
     ProfileMode? mode,
     Hand? hand,
     String? Function()? researchCode,
+    bool? readAloud,
+    bool? sounds,
   }) => Profile(
     id: id,
     name: name ?? this.name,
@@ -62,6 +78,8 @@ class Profile {
     mode: mode ?? this.mode,
     hand: hand ?? this.hand,
     researchCode: researchCode != null ? researchCode() : this.researchCode,
+    readAloud: readAloud ?? this.readAloud,
+    sounds: sounds ?? this.sounds,
     createdAt: createdAt,
   );
 
@@ -72,6 +90,8 @@ class Profile {
     'mode': mode.name,
     'hand': hand.name,
     'researchCode': researchCode,
+    'readAloud': readAloud,
+    'sounds': sounds,
     'createdAt': createdAt.toIso8601String(),
   };
 
@@ -82,6 +102,9 @@ class Profile {
     mode: ProfileMode.values.byName(j['mode'] as String? ?? 'kid'),
     hand: Hand.values.byName(j['hand'] as String? ?? 'right'),
     researchCode: j['researchCode'] as String?,
+    // Older files have no audio settings: use the defaults for the mode.
+    readAloud: j['readAloud'] as bool?,
+    sounds: j['sounds'] as bool? ?? true,
     createdAt: DateTime.parse(j['createdAt'] as String),
   );
 }
