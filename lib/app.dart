@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -58,7 +59,8 @@ class DysgraphiaApp extends StatelessWidget {
       // Light even when the device is in dark mode: easier to read, and
       // closer to paper. The dark theme stays available for later.
       themeMode: ThemeMode.light,
-      builder: (context, child) => _AudioBinder(child: child!),
+      builder: (context, child) =>
+          _AudioBinder(child: SystemBarsArea(child: child!)),
       home: const StartGate(),
     );
   }
@@ -79,5 +81,32 @@ class _AudioBinder extends ConsumerWidget {
       ..speech = profile?.readAloud ?? false
       ..sounds = profile?.sounds ?? false;
     return AppAudioScope(audio: audio, child: child);
+  }
+}
+
+/// Keeps every screen clear of the phone's system bars. Newer Android
+/// versions draw apps edge to edge, under the status bar and the navigation
+/// bar (the |||  O  < buttons), which hid the buttons at the bottom of the
+/// exercise screens. The bar areas get the app's background colour, with
+/// dark icons so they stay readable on the light theme.
+class SystemBarsArea extends StatelessWidget {
+  const SystemBarsArea({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final background = Theme.of(context).colorScheme.surface;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark.copyWith(
+        statusBarColor: Colors.transparent,
+        systemNavigationBarColor: background,
+        systemNavigationBarIconBrightness: Brightness.dark,
+      ),
+      child: ColoredBox(
+        color: background,
+        child: SafeArea(child: child),
+      ),
+    );
   }
 }

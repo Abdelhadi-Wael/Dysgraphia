@@ -41,6 +41,8 @@ Future<void> _open(WidgetTester tester, Size size, Widget screen) async {
       overrides: [progressStoreProvider.overrideWithValue(store)],
       child: MaterialApp(
         theme: DysgraphiaApp.theme(Brightness.light),
+        // Same system-bar handling as the real app.
+        builder: (context, child) => SystemBarsArea(child: child!),
         home: screen,
       ),
     ),
@@ -111,6 +113,28 @@ void main() {
           await _open(tester, size.value, screen.value());
         });
       }
+
+      testWidgets('buttons stay clear of the system bars', (tester) async {
+        // A phone's status bar (top) and 3-button navigation bar (bottom);
+        // in landscape the navigation bar and camera cut-out sit at the sides.
+        final landscape = size.value.width > size.value.height;
+        tester.view.padding = landscape
+            ? const FakeViewPadding(top: 24, left: 48, right: 48)
+            : const FakeViewPadding(top: 24, bottom: 48);
+        tester.view.viewPadding = tester.view.padding;
+        addTearDown(tester.view.resetPadding);
+        addTearDown(tester.view.resetViewPadding);
+        await _open(tester, size.value, const LetterPage(letter: 'c'));
+        final button = tester.getRect(find.text('Trace it'));
+        final free = Rect.fromLTRB(
+          landscape ? 48 : 0,
+          24,
+          size.value.width - (landscape ? 48 : 0),
+          size.value.height - (landscape ? 0 : 48),
+        );
+        expect(free.contains(button.topLeft), isTrue, reason: '$button');
+        expect(free.contains(button.bottomRight), isTrue, reason: '$button');
+      });
 
       testWidgets('tracing works and the score card fits', (tester) async {
         await _open(
