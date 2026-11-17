@@ -121,65 +121,41 @@ class _CopyViewState extends State<CopyView> {
 
   @override
   Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    final scheme = Theme.of(context).colorScheme;
-    final latest = _latest;
-
-    final body = Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(_message, key: const Key('copy-message'), style: text.titleLarge),
-        if (latest != null) ...[
-          const SizedBox(height: 8),
-          ScoreCard(
-            key: ValueKey('score-${_active - 1}'),
-            score: latest,
-            hasDescender: _hasDescender,
-          ),
-        ],
-        const SizedBox(height: 12),
-        Expanded(
-          child: LayoutBuilder(
-            builder: (context, box) {
-              // Fit model + boxes in both directions: the width limits the
-              // columns, the height (minus label and stars rows) the boxes.
-              final columns = widget.attempts + 1;
-              final byWidth = box.maxWidth / columns - 8;
-              final byHeight =
-                  (box.maxHeight - _labelH - _footerH - 8) * CopyView.aspect;
-              final w = byWidth < byHeight ? byWidth : byHeight;
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _column(
-                    width: w,
-                    label: 'Look',
-                    child: Card(
-                      color: scheme.surfaceContainerHighest,
-                      clipBehavior: Clip.antiAlias,
-                      child: LetterTemplateView(
-                        key: const Key('copy-model'),
-                        template: widget.template,
-                        showHints: false,
-                      ),
-                    ),
-                  ),
-                  for (var i = 0; i < widget.attempts; i++)
-                    _column(
-                      width: w,
-                      label: 'Box ${i + 1}',
-                      footer: _stars(i),
-                      child: _box(i, scheme),
-                    ),
-                ],
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 12),
-        _buttons(),
-      ],
+    // One box at a time, as big as the screen allows, next to (or under) a
+    // model of the same size. The header keeps a fixed slot for the score,
+    // so nothing moves when the first score appears.
+    final shown = _finished ? widget.attempts - 1 : _active;
+    final body = LayoutBuilder(
+      builder: (context, outer) {
+        final wide = outer.maxWidth > outer.maxHeight;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _header(wide),
+            const SizedBox(height: 8),
+            // Landscape: buttons beside the boxes, so the boxes get the
+            // full height. Portrait: strip and buttons below.
+            if (wide)
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(child: _pair(shown)),
+                    const SizedBox(width: 12),
+                    _buttons(vertical: true),
+                  ],
+                ),
+              )
+            else ...[
+              Expanded(child: _pair(shown)),
+              const SizedBox(height: 8),
+              _strip(),
+              const SizedBox(height: 8),
+              _buttons(vertical: false),
+            ],
+          ],
+        );
+      },
     );
 
     return _finished
@@ -187,76 +163,236 @@ class _CopyViewState extends State<CopyView> {
         : WritingShortcuts(controller: _boxes[_active], child: body);
   }
 
-  static const _labelH = 24.0, _footerH = 28.0;
-
-  Widget _column({
-    required double width,
-    required String label,
-    required Widget child,
-    Widget? footer,
-  }) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 4),
-    child: SizedBox(
-      width: width,
-      child: Column(
+  /// Message and score. Portrait: stacked. Landscape: side by side with the
+  /// attempts strip, to leave the height to the boxes.
+  Widget _header(bool wide) {
+    final text = Theme.of(context).textTheme;
+    final message = Text(
+      _message,
+      key: const Key('copy-message'),
+      style: text.titleMedium,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+    );
+    if (!wide) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SizedBox(
-            height: _labelH,
-            child: Text(label, style: Theme.of(context).textTheme.labelLarge),
+            height: 48,
+            child: Align(alignment: Alignment.centerLeft, child: message),
           ),
-          SizedBox(width: width, height: width / CopyView.aspect, child: child),
-          SizedBox(height: _footerH, child: footer),
+          _scoreSlot(),
         ],
-      ),
-    ),
-  );
-
-  Widget _box(int i, ColorScheme scheme) {
-    final active = i == _active;
-    final future = i > _active;
-    return Opacity(
-      opacity: future ? 0.35 : 1,
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: active
-              ? BorderSide(color: scheme.primary, width: 2)
-              : BorderSide.none,
-        ),
-        child: IgnorePointer(
-          ignoring: !active,
-          child: WritingCanvas(
-            key: Key('copy-canvas-$i'),
-            controller: _boxes[i],
-          ),
-        ),
-      ),
+      );
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(child: message),
+        const SizedBox(width: 12),
+        _strip(),
+        const SizedBox(width: 12),
+        SizedBox(width: 340, child: _scoreSlot()),
+      ],
     );
   }
 
-  Widget? _stars(int i) {
-    final s = _scores[i];
-    if (s == null) return null;
+  /// Always the same height: a hint until the first check, then the score
+  /// of the latest box (which can grow when its details are opened).
+  Widget _scoreSlot() {
+    final latest = _latest;
+    final scheme = Theme.of(context).colorScheme;
+    return SizedBox(
+      height: _scoreSlotHeight,
+      child: latest != null
+          ? ScoreCard(
+              key: ValueKey('score-${_active - 1}'),
+              score: latest,
+              hasDescender: _hasDescender,
+            )
+          : Card(
+              key: const Key('score-placeholder'),
+              child: SizedBox(
+                height: ScoreCard.height,
+                child: Row(
+                  children: [
+                    const SizedBox(width: 16),
+                    Icon(
+                      Icons.star_border_rounded,
+                      color: scheme.outline,
+                      size: 32,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Check your writing to earn stars',
+                        style: TextStyle(color: scheme.outline),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+    );
+  }
+
+  static const _scoreSlotHeight = ScoreCard.height + 8;
+  static const _labelH = 22.0;
+
+  /// The model and box [i], the same size, as big as fits: side by side or
+  /// one above the other, whichever gives bigger boxes.
+  Widget _pair(int i) {
+    final scheme = Theme.of(context).colorScheme;
+    return LayoutBuilder(
+      builder: (context, box) {
+        const gap = 12.0, a = CopyView.aspect;
+        // Box width when side by side, and when stacked.
+        final sideW = [
+          (box.maxWidth - gap) / 2,
+          (box.maxHeight - _labelH) * a,
+        ].reduce((x, y) => x < y ? x : y);
+        final stackW = [
+          box.maxWidth,
+          (box.maxHeight - 2 * _labelH - gap) / 2 * a,
+        ].reduce((x, y) => x < y ? x : y);
+        final side = sideW >= stackW;
+        final w = (side ? sideW : stackW).clamp(0.0, double.infinity);
+
+        final model = _panel(
+          width: w,
+          label: 'Look',
+          child: Card(
+            color: scheme.surfaceContainerHighest,
+            clipBehavior: Clip.antiAlias,
+            child: LetterTemplateView(
+              key: const Key('copy-model'),
+              template: widget.template,
+              showHints: false,
+            ),
+          ),
+        );
+        final writing = _panel(
+          width: w,
+          label: _finished
+              ? 'Box ${i + 1} of ${widget.attempts}'
+              : 'Box ${i + 1} of ${widget.attempts}: write here',
+          child: Card(
+            clipBehavior: Clip.antiAlias,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: _finished ? scheme.outlineVariant : scheme.primary,
+                width: 2,
+              ),
+            ),
+            child: IgnorePointer(
+              ignoring: _finished,
+              child: WritingCanvas(
+                key: Key('copy-canvas-$i'),
+                controller: _boxes[i],
+              ),
+            ),
+          ),
+        );
+        return Center(
+          child: side
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    model,
+                    const SizedBox(width: gap),
+                    writing,
+                  ],
+                )
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    model,
+                    const SizedBox(height: gap),
+                    writing,
+                  ],
+                ),
+        );
+      },
+    );
+  }
+
+  Widget _panel({
+    required double width,
+    required String label,
+    required Widget child,
+  }) => SizedBox(
+    width: width,
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          height: _labelH,
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.labelLarge,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        SizedBox(width: width, height: width / CopyView.aspect, child: child),
+      ],
+    ),
+  );
+
+  /// Stars for every attempt so far; the current box is outlined.
+  Widget _strip() {
+    final scheme = Theme.of(context).colorScheme;
     return Row(
-      key: Key('box-$i-stars-${s.stars}'),
+      mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        for (var k = 1; k <= 3; k++)
-          Icon(
-            k <= s.stars ? Icons.star_rounded : Icons.star_border_rounded,
-            color: Colors.amber.shade600,
-            size: 24,
+        for (var i = 0; i < widget.attempts; i++)
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 3),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: i == _active ? scheme.primary : scheme.outlineVariant,
+                width: i == _active ? 2 : 1,
+              ),
+            ),
+            child: Row(
+              key: _scores[i] == null
+                  ? Key('box-$i-empty')
+                  : Key('box-$i-stars-${_scores[i]!.stars}'),
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '${i + 1} ',
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
+                for (var k = 1; k <= 3; k++)
+                  Icon(
+                    _scores[i] != null && k <= _scores[i]!.stars
+                        ? Icons.star_rounded
+                        : Icons.star_border_rounded,
+                    color: _scores[i] == null
+                        ? scheme.outlineVariant
+                        : Colors.amber.shade600,
+                    size: 16,
+                  ),
+              ],
+            ),
           ),
       ],
     );
   }
 
-  Widget _buttons() {
+  Widget _buttons({required bool vertical}) {
     if (_finished) {
-      // Wraps onto two lines on narrow screens.
+      // Wraps onto two lines on narrow screens; a column in landscape.
       return Wrap(
+        direction: vertical ? Axis.vertical : Axis.horizontal,
         alignment: WrapAlignment.end,
+        crossAxisAlignment: WrapCrossAlignment.end,
         spacing: 12,
         runSpacing: 8,
         children: [
@@ -284,26 +420,34 @@ class _CopyViewState extends State<CopyView> {
     final c = _boxes[_active];
     return ListenableBuilder(
       listenable: c,
-      builder: (context, _) => Row(
-        children: [
-          IconButton(
-            tooltip: 'Undo (Ctrl+Z)',
-            icon: const Icon(Icons.undo),
-            onPressed: c.canUndo ? c.undo : null,
-          ),
-          IconButton(
-            tooltip: 'Clear',
-            icon: const Icon(Icons.delete_outline),
-            onPressed: c.isEmpty ? null : c.clear,
-          ),
-          const Spacer(),
-          FilledButton.icon(
-            onPressed: c.drawing.isEmpty ? null : _check,
-            icon: const Icon(Icons.check),
-            label: const Text('Check'),
-          ),
-        ],
-      ),
+      builder: (context, _) {
+        final undo = IconButton(
+          tooltip: 'Undo (Ctrl+Z)',
+          icon: const Icon(Icons.undo),
+          onPressed: c.canUndo ? c.undo : null,
+        );
+        final clear = IconButton(
+          tooltip: 'Clear',
+          icon: const Icon(Icons.delete_outline),
+          onPressed: c.isEmpty ? null : c.clear,
+        );
+        final check = FilledButton.icon(
+          onPressed: c.drawing.isEmpty ? null : _check,
+          icon: const Icon(Icons.check),
+          label: const Text('Check'),
+        );
+        return vertical
+            ? Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Row(mainAxisSize: MainAxisSize.min, children: [undo, clear]),
+                  const SizedBox(height: 8),
+                  check,
+                ],
+              )
+            : Row(children: [undo, clear, const Spacer(), check]);
+      },
     );
   }
 }

@@ -99,11 +99,23 @@ void main() {
     expect(find.byKey(const Key('box-0-stars-3')), findsNothing);
   });
 
-  testWidgets('only the active box takes writing', (tester) async {
+  testWidgets('one box at a time, and the next opens in the same place', (
+    tester,
+  ) async {
     await _openCopy(tester, 'l');
-    await _writeIn(tester, 1, latinLowercase['l']!.drawing); // not active
-    expect(_checkEnabled(tester), isFalse);
+    expect(find.byKey(const Key('copy-canvas-1')), findsNothing);
+    final first = tester.getRect(find.byKey(const Key('copy-canvas-0')));
+    expect(find.byKey(const Key('score-placeholder')), findsOneWidget);
+
     await _writeIn(tester, 0, latinLowercase['l']!.drawing);
     expect(_checkEnabled(tester), isTrue);
+    await tester.tap(find.text('Check'));
+    await tester.pump();
+
+    // The score card fills the slot the hint held: nothing moves.
+    expect(find.byKey(const Key('copy-canvas-0')), findsNothing);
+    final second = tester.getRect(find.byKey(const Key('copy-canvas-1')));
+    expect(second, first);
+    expect(_checkEnabled(tester), isFalse, reason: 'box 2 starts empty');
   });
 }

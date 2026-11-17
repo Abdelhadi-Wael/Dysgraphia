@@ -28,7 +28,7 @@ class FitOrScroll extends StatelessWidget {
 abstract final class ExerciseHeights {
   static const watch = 240.0;
   static const trace = 280.0;
-  static const copy = 360.0;
+  static const copy = 260.0;
   static const check = 340.0;
 }
 
