@@ -4,7 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../core/state/app_data.dart';
 import '../profiles/profile_form_page.dart';
 import '../profiles/profile_picker_page.dart';
-import 'home_page.dart';
+import 'main_shell.dart';
 
 /// Decides the first screen: welcome (no profiles yet), "Who's practising?"
 /// (several profiles, none chosen) or the home screen.
@@ -39,7 +39,7 @@ class StartGate extends ConsumerWidget {
               ? const ProfileFormPage(firstRun: true)
               : d.current == null
               ? ProfilePickerPage(profiles: d.profiles)
-              : const HomePage(),
+              : const MainShell(),
         );
   }
 }
