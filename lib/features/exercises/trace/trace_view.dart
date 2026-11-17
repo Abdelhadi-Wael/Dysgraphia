@@ -20,14 +20,16 @@ class TraceView extends StatefulWidget {
   const TraceView({
     super.key,
     required this.template,
-    this.onCopy,
+    this.onNext,
+    this.nextLabel = 'Copy it',
     this.onFinished,
   });
 
   final LetterTemplate template;
 
-  /// When set, a finished trace offers "Copy it" to move on.
-  final VoidCallback? onCopy;
+  /// When set, a finished trace offers [nextLabel] to move on.
+  final VoidCallback? onNext;
+  final String nextLabel;
 
   /// Called once each time the letter is completed, with what was written
   /// (in canvas line units), its score and how many strokes were rejected.
@@ -249,12 +251,12 @@ class _TraceViewState extends State<TraceView>
                     icon: const Icon(Icons.replay),
                     label: const Text('Trace again'),
                   ),
-                  if (widget.onCopy != null) ...[
+                  if (widget.onNext != null) ...[
                     const SizedBox(width: 12),
                     FilledButton.icon(
-                      onPressed: widget.onCopy,
+                      onPressed: widget.onNext,
                       icon: const Icon(Icons.arrow_forward),
-                      label: const Text('Copy it'),
+                      label: Text(widget.nextLabel),
                     ),
                   ],
                 ],
