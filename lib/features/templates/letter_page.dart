@@ -53,15 +53,7 @@ class _LetterPageState extends State<LetterPage> {
     LetterScore score, {
     int retries = 0,
   }) => widget.onAttempt?.call(
-    Attempt(
-      letter: widget.letter,
-      kind: kind,
-      stars: score.stars,
-      overall: score.overall,
-      score: score.toJson(),
-      retries: retries,
-      drawing: drawing,
-    ),
+    makeAttempt(widget.letter, kind, drawing, score, retries: retries),
   );
 
   void _nextLetter() => Navigator.of(context).pushReplacement(
@@ -133,3 +125,20 @@ class _LetterPageState extends State<LetterPage> {
     );
   }
 }
+
+/// A history entry for a finished trace or checked copy of [id].
+Attempt makeAttempt(
+  String id,
+  PracticeKind kind,
+  Drawing drawing,
+  LetterScore score, {
+  int retries = 0,
+}) => Attempt(
+  letter: id,
+  kind: kind,
+  stars: score.stars,
+  overall: score.overall,
+  score: score.toJson(),
+  retries: retries,
+  drawing: drawing,
+);
