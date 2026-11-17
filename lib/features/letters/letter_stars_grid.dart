@@ -30,15 +30,17 @@ class LetterStarsGrid extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
     final letters = templates ?? latinLowercase.values.toList();
+    final shapes = letters.any((t) => t.isShape);
     return GridView.builder(
       shrinkWrap: shrinkWrap,
       physics: shrinkWrap ? const NeverScrollableScrollPhysics() : null,
       padding: const EdgeInsets.all(4),
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 120,
+      // Shapes are wider than letters and get their name on the card.
+      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: shapes ? 180 : 120,
         mainAxisSpacing: 8,
         crossAxisSpacing: 8,
-        childAspectRatio: 0.8,
+        childAspectRatio: shapes ? 0.95 : 0.8,
       ),
       itemCount: letters.length,
       itemBuilder: (context, i) {
@@ -60,6 +62,7 @@ class LetterStarsGrid extends StatelessWidget {
                 Expanded(
                   child: LetterTemplateView(template: t, showHints: false),
                 ),
+                if (t.isShape) Text(t.label, style: text.titleSmall),
                 SizedBox(
                   height: 28,
                   child: stars == null

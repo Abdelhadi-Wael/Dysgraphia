@@ -116,15 +116,23 @@ class HomePage extends ConsumerWidget {
                     _Tile(
                       icon: Icons.insights,
                       title: 'My progress',
-                      subtitle: '${h.attempts.length} letters practised',
+                      subtitle: h.attempts.length == 1
+                          ? '1 exercise done'
+                          : '${h.attempts.length} exercises done',
                       onTap: () => push(const ProgressPage()),
                     ),
                   ];
                   // Side by side when there is room, otherwise stacked.
                   return box.maxWidth > 600
-                      ? Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [for (final t in tiles) Expanded(child: t)],
+                      // Same height for all tiles, even if one subtitle
+                      // wraps onto two lines.
+                      ? IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              for (final t in tiles) Expanded(child: t),
+                            ],
+                          ),
                         )
                       : Column(children: tiles);
                 },
