@@ -45,14 +45,42 @@ class JourneyPage extends ConsumerStatefulWidget {
 }
 
 class _JourneyPageState extends ConsumerState<JourneyPage> {
-  /// Created on the first build, when we know where the current challenge
-  /// is, so the path opens scrolled to it.
-  ScrollController? _scroll;
+  final _scroll = ScrollController();
+
+  /// Keeps the current challenge centred until the user scrolls by hand:
+  /// re-centres when the visible area changes size (windows and tablets
+  /// can resize right after opening) or the current challenge changes.
+  var _userScrolled = false;
+  double? _centredForHeight;
+  int? _centredForChallenge;
 
   @override
   void dispose() {
-    _scroll?.dispose();
+    _scroll.dispose();
     super.dispose();
+  }
+
+  /// Distance from the bottom of the (reversed) list to the middle of
+  /// challenge [n]: padding, level banners so far, and the rows below it.
+  static double _centreOf(int n) {
+    final c = challengeNumber(n);
+    final levels = journeyLevels.indexOf(c.level) + 1;
+    return 32 +
+        levels * JourneyPage.levelHeaderHeight +
+        (n - 1) * JourneyPage.rowHeight +
+        JourneyPage.rowHeight / 2;
+  }
+
+  void _centre(int n, double viewport) {
+    if (_userScrolled) return;
+    if (_centredForHeight == viewport && _centredForChallenge == n) return;
+    _centredForHeight = viewport;
+    _centredForChallenge = n;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scroll.hasClients || _userScrolled) return;
+      final max = _scroll.position.maxScrollExtent;
+      _scroll.jumpTo((_centreOf(n) - viewport / 2).clamp(0.0, max));
+    });
   }
 
   @override
@@ -65,17 +93,6 @@ class _JourneyPageState extends ConsumerState<JourneyPage> {
     final (done, total) = levelProgress(h, level);
     final text = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
-
-    // Start scrolled so the current challenge is in view.
-    final currentIndex = (current?.number ?? journey.length) - 1;
-    final levelsBefore = journeyLevels.indexOf(level) + 1;
-    _scroll ??= ScrollController(
-      initialScrollOffset:
-          (currentIndex * JourneyPage.rowHeight +
-                  levelsBefore * JourneyPage.levelHeaderHeight -
-                  200)
-              .clamp(0.0, double.infinity),
-    );
 
     return Scaffold(
       body: SafeArea(
@@ -154,22 +171,36 @@ class _JourneyPageState extends ConsumerState<JourneyPage> {
               ),
             ),
             Expanded(
-              child: ListView(
-                key: const Key('journey-path'),
-                controller: _scroll,
-                padding: const EdgeInsets.only(bottom: 32),
-                children: [
-                  for (final lv in journeyLevels) ...[
-                    _LevelHeader(level: lv, history: h),
-                    for (final c in journey.where((c) => c.level == lv))
-                      _PathRow(
-                        challenge: c,
-                        history: h,
-                        isCurrent: c.number == current?.number,
-                        avatar: p.avatar,
-                      ),
-                  ],
-                ],
+              child: LayoutBuilder(
+                builder: (context, box) {
+                  _centre(current?.number ?? journey.length, box.maxHeight);
+                  return NotificationListener<UserScrollNotification>(
+                    onNotification: (_) {
+                      _userScrolled = true;
+                      return false;
+                    },
+                    // Reversed: the journey starts at the bottom and climbs
+                    // up, so the next challenge is always above the current.
+                    child: ListView(
+                      key: const Key('journey-path'),
+                      reverse: true,
+                      controller: _scroll,
+                      padding: const EdgeInsets.symmetric(vertical: 32),
+                      children: [
+                        for (final lv in journeyLevels) ...[
+                          _LevelHeader(level: lv, history: h),
+                          for (final c in journey.where((c) => c.level == lv))
+                            _PathRow(
+                              challenge: c,
+                              history: h,
+                              isCurrent: c.number == current?.number,
+                              avatar: p.avatar,
+                            ),
+                        ],
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
           ],
@@ -235,6 +266,11 @@ class _PathRow extends ConsumerWidget {
     final stars = challengeStars(history, challenge.number);
     final unlocked = isUnlocked(history, challenge);
     final size = isCurrent ? 84.0 : 68.0;
+    final nodeTop = (JourneyPage.rowHeight - size) / 2 - 8;
+    // The node below is bigger when it is the current challenge.
+    final previousIsCurrent =
+        currentChallenge(history)?.number == challenge.number - 1;
+    final previousSize = previousIsCurrent ? 84.0 : 68.0;
 
     final (bg, fg, border) = stars != null
         ? (scheme.primaryContainer, scheme.onPrimaryContainer, scheme.primary)
@@ -322,22 +358,23 @@ class _PathRow extends ConsumerWidget {
               if (challenge != firstInLevel)
                 Positioned.fill(
                   child: CustomPaint(
+                    // The previous challenge is in the row below: from
+                    // just above it to just below this node's label.
                     painter: _ConnectorPainter(
                       fromX: box.maxWidth * JourneyPage.nodeX(i - 1),
+                      fromY:
+                          JourneyPage.rowHeight +
+                          (JourneyPage.rowHeight - previousSize) / 2 -
+                          14,
                       toX: cx,
-                      toY: (JourneyPage.rowHeight - size) / 2 - 16,
+                      toY: nodeTop + size + 26,
                       color: stars != null || isCurrent
                           ? scheme.primary
                           : scheme.outlineVariant,
                     ),
                   ),
                 ),
-              Positioned(
-                left: cx - 60,
-                width: 120,
-                top: (JourneyPage.rowHeight - size) / 2 - 8,
-                child: node,
-              ),
+              Positioned(left: cx - 60, width: 120, top: nodeTop, child: node),
               if (isCurrent)
                 Positioned(
                   left: cx + size / 2 + 4,
@@ -352,23 +389,24 @@ class _PathRow extends ConsumerWidget {
   }
 }
 
-/// Dotted curve from the previous node (above) to this one.
+/// Dotted curve from the previous node (below) up to this one.
 class _ConnectorPainter extends CustomPainter {
   _ConnectorPainter({
     required this.fromX,
+    required this.fromY,
     required this.toX,
     required this.toY,
     required this.color,
   });
 
-  final double fromX, toX, toY;
+  final double fromX, fromY, toX, toY;
   final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
     final path = Path()
-      ..moveTo(fromX, -22)
-      ..cubicTo(fromX, toY / 2, toX, toY / 2, toX, toY);
+      ..moveTo(fromX, fromY)
+      ..cubicTo(fromX, (fromY + toY) / 2, toX, (fromY + toY) / 2, toX, toY);
     final paint = Paint()
       ..color = color
       ..strokeWidth = 6
@@ -384,6 +422,7 @@ class _ConnectorPainter extends CustomPainter {
   @override
   bool shouldRepaint(_ConnectorPainter old) =>
       old.fromX != fromX ||
+      old.fromY != fromY ||
       old.toX != toX ||
       old.toY != toY ||
       old.color != color;

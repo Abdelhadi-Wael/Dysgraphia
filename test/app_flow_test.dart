@@ -151,6 +151,44 @@ void main() {
     expect(find.text('Start!'), findsOneWidget); // now on challenge 2
   });
 
+  testWidgets('the journey climbs: next challenge above, banner below', (
+    tester,
+  ) async {
+    final store = MemoryStore()..profiles = [Profile.create(name: 'Sami')];
+    await _launch(tester, store);
+    double y(String key) => tester.getCenter(find.byKey(Key(key))).dy;
+    expect(y('challenge-2'), lessThan(y('challenge-1')));
+    expect(y('challenge-3'), lessThan(y('challenge-2')));
+    final banner = tester.getCenter(find.text('Level A · Round letters · 0/6'));
+    expect(banner.dy, greaterThan(y('challenge-1')));
+  });
+
+  testWidgets('the journey opens on the current challenge', (tester) async {
+    final sami = Profile.create(name: 'Sami');
+    final store = MemoryStore()
+      ..profiles = [sami]
+      ..histories[sami.id] = History(
+        challenges: [
+          for (var n = 1; n <= 4; n++) ChallengeRecord(number: n, stars: 2),
+        ],
+      );
+    await _launch(tester, store);
+    final current = find.byKey(const Key('challenge-5'));
+    expect(current, findsOneWidget);
+    final path = tester.getRect(find.byKey(const Key('journey-path')));
+    expect(path.contains(tester.getCenter(current)), isTrue);
+    expect(find.text('Start!'), findsOneWidget);
+
+    // The window changes size right after opening (desktop start-up,
+    // tablet rotation): the current challenge stays in view.
+    tester.view.physicalSize = const Size(1280, 500);
+    await tester.pumpAndSettle();
+    tester.view.physicalSize = const Size(1280, 900);
+    await tester.pumpAndSettle();
+    final path2 = tester.getRect(find.byKey(const Key('journey-path')));
+    expect(path2.contains(tester.getCenter(current)), isTrue);
+  });
+
   testWidgets('two people: pick who is practising, switch from Me', (
     tester,
   ) async {
