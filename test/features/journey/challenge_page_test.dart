@@ -1,3 +1,4 @@
+import 'package:dysgraphia_app/core/audio/app_audio.dart';
 import 'package:dysgraphia_app/core/models/guide_geometry.dart';
 import 'package:dysgraphia_app/core/models/history.dart';
 import 'package:dysgraphia_app/core/models/stroke.dart';
@@ -47,6 +48,18 @@ Future<void> _copy(WidgetTester tester, String id, int boxes) async {
   }
 }
 
+/// Records what would be said and played.
+class _FakeAudio implements AppAudio {
+  final said = <String>[];
+  final played = <Sfx>[];
+  @override
+  Future<void> say(String text) async => said.add(text);
+  @override
+  Future<void> play(Sfx sfx) async => played.add(sfx);
+  @override
+  Future<void> stop() async {}
+}
+
 String _stepLabel(WidgetTester tester) =>
     tester.widget<Text>(find.byKey(const Key('challenge-step'))).data!;
 
@@ -59,15 +72,19 @@ void main() {
     addTearDown(tester.view.reset);
 
     final attempts = <Attempt>[];
+    final audio = _FakeAudio();
     int? completedStars;
     final challenge = challengeNumber(2); // letter a, warm-up circles
     await tester.pumpWidget(
       MaterialApp(
-        home: ChallengePage(
-          challenge: challenge,
-          review: 'c',
-          onAttempt: attempts.add,
-          onComplete: (s) => completedStars = s,
+        home: AppAudioScope(
+          audio: audio,
+          child: ChallengePage(
+            challenge: challenge,
+            review: 'c',
+            onAttempt: attempts.add,
+            onComplete: (s) => completedStars = s,
+          ),
         ),
       ),
     );
@@ -104,6 +121,8 @@ void main() {
     expect(find.byKey(const Key('celebration-stars-3')), findsOneWidget);
     expect(find.text('Challenge 3 is now open.'), findsOneWidget);
     expect(completedStars, 3);
+    expect(audio.played.last, Sfx.success);
+    expect(audio.said.last, 'Challenge 2 complete! You got 3 stars.');
     expect(attempts.map((a) => '${a.letter}:${a.kind.name}'), [
       'warmup-circle:trace',
       'a:trace',

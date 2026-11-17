@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../../core/audio/app_audio.dart';
 import '../../../core/models/stroke.dart';
 import '../../canvas/writing_canvas.dart';
 import '../../canvas/writing_controller.dart';
@@ -54,6 +55,9 @@ class _CopyViewState extends State<CopyView> {
   void initState() {
     super.initState();
     _reset();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) AppAudioScope.of(context).say(_message);
+    });
   }
 
   void _reset() {
@@ -79,11 +83,21 @@ class _CopyViewState extends State<CopyView> {
       _active++;
     });
     widget.onChecked?.call(drawing, score);
+    final audio = AppAudioScope.of(context);
+    final tip = ScoreCard.tipText(score.tip, hasDescender: _hasDescender);
+    if (_finished) {
+      audio.play(Sfx.success);
+      audio.say('$tip All done!');
+    } else {
+      audio.play(Sfx.star);
+      audio.say('$tip $_message.');
+    }
   }
 
   void _again() {
     final old = _boxes;
     setState(_reset);
+    AppAudioScope.of(context).say(_message);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       for (final b in old) {
         b.dispose();

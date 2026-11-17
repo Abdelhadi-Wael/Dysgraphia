@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
+import '../../../core/audio/app_audio.dart';
 import '../../../core/models/guide_geometry.dart';
 import '../../../core/models/stroke.dart';
 import '../../canvas/writing_canvas.dart';
@@ -75,10 +76,31 @@ class _TraceViewState extends State<TraceView>
   int get _accepted => _controller.drawing.strokeCount;
   bool get _complete => _checker.isComplete(_accepted);
 
+  /// Last message read aloud, so each one is said only once.
+  String? _spoken;
+
+  AppAudio get _audio => AppAudioScope.of(context);
+
   @override
   void initState() {
     super.initState();
     _controller.addListener(_onChange);
+    // Read the first instruction once the screen is up.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _speak();
+    });
+  }
+
+  /// Reads the message aloud when it changes. While the pen is down and
+  /// all is well, stays quiet: only mistakes interrupt the writing.
+  void _speak() {
+    final text = _complete && _score != null
+        ? 'Well done! ${ScoreCard.tipText(_score!.tip, hasDescender: _shape.bounds!.$4 > 0.2)}'
+        : _message;
+    if (text == _spoken) return;
+    if (_controller.isWriting && _live == TraceIssue.none) return;
+    _spoken = text;
+    _audio.say(text);
   }
 
   @override
@@ -99,11 +121,13 @@ class _TraceViewState extends State<TraceView>
       final drawing = _controller.drawing;
       _score = const LetterScorer().score(drawing, _shape);
       widget.onFinished?.call(drawing, _score!, _mistakes);
+      _audio.play(Sfx.success);
     } else if (!_complete) {
       _score = null;
     }
     // Rebuild for the message; the canvas repaints by itself.
     setState(() => _live = live);
+    _speak();
   }
 
   bool _onStrokeEnd(Stroke s) {
@@ -116,6 +140,7 @@ class _TraceViewState extends State<TraceView>
     _rejected = s;
     _rejectedIssue = r.issue;
     _fade.forward(from: 0);
+    _audio.play(Sfx.oops);
     return false;
   }
 

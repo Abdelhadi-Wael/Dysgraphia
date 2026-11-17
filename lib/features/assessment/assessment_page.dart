@@ -1,4 +1,7 @@
 import 'dart:io';
+
+import '../../core/audio/app_audio.dart';
+
 import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
@@ -47,6 +50,27 @@ class _AssessmentPageState extends State<AssessmentPage> {
   bool get _finished => _index >= widget.tasks.length;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _sayTask());
+  }
+
+  /// Reads the current task aloud, with the text to copy if there is one.
+  void _sayTask() {
+    if (!mounted) return;
+    final audio = AppAudioScope.of(context);
+    if (_finished) {
+      audio.play(Sfx.success);
+      audio.say('Handwriting check complete. Well done!');
+      return;
+    }
+    final t = widget.tasks[_index];
+    audio.say(
+      t.modelText == null ? t.instruction : '${t.instruction}: ${t.modelText}',
+    );
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     super.dispose();
@@ -70,6 +94,7 @@ class _AssessmentPageState extends State<AssessmentPage> {
     });
     WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
 
+    _sayTask();
     if (_finished) await _save();
   }
 

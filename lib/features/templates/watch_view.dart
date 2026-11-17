@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/audio/app_audio.dart';
 import 'letter_template_view.dart';
 import 'letter_templates.dart';
 import 'stroke_timeline.dart';
@@ -29,6 +30,18 @@ class _WatchViewState extends State<WatchView>
     vsync: this,
     duration: _timeline.total,
   )..forward();
+
+  String get _intro => widget.template.isShape
+      ? 'Watch how to draw ${widget.template.label.toLowerCase()}.'
+      : 'Watch how to write the letter ${widget.template.letter}.';
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) AppAudioScope.of(context).say(_intro);
+    });
+  }
 
   @override
   void dispose() {
@@ -65,7 +78,10 @@ class _WatchViewState extends State<WatchView>
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
             OutlinedButton.icon(
-              onPressed: () => _animation.forward(from: 0),
+              onPressed: () {
+                _animation.forward(from: 0);
+                AppAudioScope.of(context).say(_intro);
+              },
               icon: const Icon(Icons.replay),
               label: const Text('Watch again'),
             ),

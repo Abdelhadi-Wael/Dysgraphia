@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/audio/app_audio.dart';
 import '../../core/models/history.dart';
 import '../exercises/copy/copy_view.dart';
 import '../exercises/trace/trace_view.dart';
@@ -75,7 +76,14 @@ class _ChallengePageState extends State<ChallengePage> {
   void _next() {
     setState(() => _index++);
     if (_step.kind == _Kind.done) {
-      widget.onComplete?.call(math.max(1, _bestStars));
+      final stars = math.max(1, _bestStars);
+      widget.onComplete?.call(stars);
+      final audio = AppAudioScope.of(context);
+      audio.play(Sfx.success);
+      audio.say(
+        'Challenge ${widget.challenge.number} complete! You got $stars '
+        '${stars == 1 ? 'star' : 'stars'}.',
+      );
     }
   }
 
