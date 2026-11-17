@@ -40,6 +40,17 @@ void main() {
       expect(bestStars(hist), {'a': 3});
       expect(totalStars(hist), 3);
     });
+
+    test('warm-up shapes are counted separately, not as letters', () {
+      final hist = h([a('a', 2), a('warmup-circle', 3), a('warmup-down', 1)]);
+      expect(bestStars(hist), {'a': 2});
+      expect(totalStars(hist), 2);
+      expect(suggestLetters(hist), isNot(contains('warmup-down')));
+      expect(bestStarsFor(hist, ['warmup-circle', 'warmup-down']), {
+        'warmup-circle': 3,
+        'warmup-down': 1,
+      });
+    });
   });
 
   group('streak', () {

@@ -6,7 +6,7 @@ import '../exercises/copy/copy_view.dart';
 import '../exercises/trace/trace_view.dart';
 import '../scoring/letter_scorer.dart';
 import 'letter_template_view.dart';
-import 'letter_templates.dart';
+import 'warmup_shapes.dart';
 import 'stroke_timeline.dart';
 
 enum LetterStep { watch, trace, copy }
@@ -39,7 +39,7 @@ class LetterPage extends StatefulWidget {
 
 class _LetterPageState extends State<LetterPage>
     with SingleTickerProviderStateMixin {
-  late final _template = latinLowercase[widget.letter]!;
+  late final _template = templateFor(widget.letter);
   late final _timeline = StrokeTimeline(_template.drawing);
   late final _animation = AnimationController(
     vsync: this,
@@ -62,6 +62,11 @@ class _LetterPageState extends State<LetterPage>
   void _go(LetterStep step) {
     setState(() => _step = step);
     if (step == LetterStep.watch) _animation.forward(from: 0);
+  }
+
+  String get _nextLabel {
+    final next = templateFor(widget.queue.first);
+    return next.isShape ? 'Next: ${next.label}' : 'Next letter: ${next.letter}';
   }
 
   void _report(
@@ -95,7 +100,7 @@ class _LetterPageState extends State<LetterPage>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Letter ${widget.letter}'),
+        title: Text(_template.label),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
@@ -139,9 +144,7 @@ class _LetterPageState extends State<LetterPage>
             template: _template,
             onChecked: (drawing, score) =>
                 _report(PracticeKind.copy, drawing, score),
-            nextLabel: widget.queue.isEmpty
-                ? null
-                : 'Next letter: ${widget.queue.first}',
+            nextLabel: widget.queue.isEmpty ? null : _nextLabel,
             onNext: widget.queue.isEmpty ? null : _nextLetter,
           ),
         },
@@ -154,7 +157,7 @@ class _LetterPageState extends State<LetterPage>
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Watch how to write it',
+          'Watch how to ${_template.verb} it',
           style: Theme.of(context).textTheme.headlineSmall,
         ),
         const SizedBox(height: 12),

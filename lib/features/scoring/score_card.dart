@@ -15,7 +15,7 @@ class ScoreCard extends StatefulWidget {
   static String tipText(ScoreTip tip, {bool hasDescender = false}) =>
       switch (tip) {
         ScoreTip.none => 'Great job!',
-        ScoreTip.shape => 'Look at the dotted letter and match its shape',
+        ScoreTip.shape => 'Look closely at the model and match its shape',
         ScoreTip.tooBig => 'Make it a little smaller',
         ScoreTip.tooSmall => 'Make it a little bigger',
         ScoreTip.tooHigh =>

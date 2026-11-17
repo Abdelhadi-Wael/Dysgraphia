@@ -99,9 +99,10 @@ class _CopyViewState extends State<CopyView> {
       return 'All done! Best: ${'★' * best}';
     }
     if (_active == 0) {
-      return 'Look at the letter, then write it in box 1';
+      final t = widget.template;
+      return 'Look at the ${t.noun}, then ${t.verb} it in box 1';
     }
-    return 'Now write it again in box ${_active + 1}';
+    return 'Now ${widget.template.verb} it again in box ${_active + 1}';
   }
 
   @override

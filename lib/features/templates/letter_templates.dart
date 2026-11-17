@@ -1,14 +1,31 @@
 import '../../core/models/stroke.dart';
 import 'template_builder.dart';
 
-/// The model of how one letter should be written: shape, number of
-/// strokes, their order, where each starts and which way it goes.
+/// The model of how one letter (or warm-up shape) should be written: shape,
+/// number of strokes, their order, where each starts and which way it goes.
 class LetterTemplate {
-  LetterTemplate(this.letter, List<Stroke> strokes)
-    : drawing = Drawing(strokes);
+  LetterTemplate(
+    this.letter,
+    List<Stroke> strokes, {
+    String? label,
+    this.isShape = false,
+  }) : drawing = Drawing(strokes),
+       label = label ?? 'Letter $letter';
 
+  /// Id: the letter itself ("a"), or e.g. "warmup-circle" for a shape.
+  /// Saved in history as Attempt.letter.
   final String letter;
   final Drawing drawing;
+
+  /// Title shown to the user, e.g. "Letter a" or "Circles".
+  final String label;
+
+  /// A warm-up shape rather than a letter: screens say "draw the shape"
+  /// instead of "write the letter".
+  final bool isShape;
+
+  String get noun => isShape ? 'shape' : 'letter';
+  String get verb => isShape ? 'draw' : 'write';
 
   int get strokeCount => drawing.strokeCount;
 

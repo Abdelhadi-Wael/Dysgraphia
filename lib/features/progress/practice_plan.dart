@@ -11,12 +11,19 @@ const teachingOrder =
     'uyvw'
     'ejkfsxz';
 
+final _letterIds = teachingOrder.split('').toSet();
+
 /// Best stars per letter from copy attempts (copying is the real test;
-/// tracing is guided). Letters never copied are missing.
-Map<String, int> bestStars(History h) {
+/// tracing is guided). Letters never copied are missing. Warm-up shapes are
+/// not letters and are left out.
+Map<String, int> bestStars(History h) => bestStarsFor(h, _letterIds);
+
+/// Best copy stars for the given template ids only (letters or shapes).
+Map<String, int> bestStarsFor(History h, Iterable<String> ids) {
+  final wanted = ids.toSet();
   final best = <String, int>{};
   for (final a in h.attempts) {
-    if (a.kind != PracticeKind.copy) continue;
+    if (a.kind != PracticeKind.copy || !wanted.contains(a.letter)) continue;
     final old = best[a.letter];
     if (old == null || a.stars > old) best[a.letter] = a.stars;
   }
