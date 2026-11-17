@@ -100,25 +100,38 @@ class _WritingCanvasState extends State<WritingCanvas> {
     return LayoutBuilder(
       builder: (context, constraints) {
         _geometry = GuideGeometry(constraints.biggest);
-        return Listener(
+        // Claims every touch that lands on the canvas immediately, so a
+        // scrolling page around it (short screens) never moves while
+        // someone writes. Drawing itself uses the raw pointer events below.
+        return RawGestureDetector(
           behavior: HitTestBehavior.opaque,
-          onPointerDown: _down,
-          onPointerMove: _move,
-          onPointerUp: _up,
-          onPointerCancel: _cancel,
-          child: CustomPaint(
-            size: constraints.biggest,
-            painter: _WritingPainter(
-              controller: widget.controller,
-              geometry: _geometry!,
-              ghost: widget.ghost,
-              showGuides: widget.showGuides,
-              inkWidth: widget.inkWidth,
-              inkColor: scheme.primary,
-              guideColor: scheme.outline,
-              zoneColor: scheme.primary,
-              ghostColor: scheme.outline,
-              inkColorOf: widget.inkColorOf,
+          gestures: {
+            EagerGestureRecognizer:
+                GestureRecognizerFactoryWithHandlers<EagerGestureRecognizer>(
+                  EagerGestureRecognizer.new,
+                  (_) {},
+                ),
+          },
+          child: Listener(
+            behavior: HitTestBehavior.opaque,
+            onPointerDown: _down,
+            onPointerMove: _move,
+            onPointerUp: _up,
+            onPointerCancel: _cancel,
+            child: CustomPaint(
+              size: constraints.biggest,
+              painter: _WritingPainter(
+                controller: widget.controller,
+                geometry: _geometry!,
+                ghost: widget.ghost,
+                showGuides: widget.showGuides,
+                inkWidth: widget.inkWidth,
+                inkColor: scheme.primary,
+                guideColor: scheme.outline,
+                zoneColor: scheme.primary,
+                ghostColor: scheme.outline,
+                inkColorOf: widget.inkColorOf,
+              ),
             ),
           ),
         );
