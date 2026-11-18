@@ -9,7 +9,12 @@ import 'package:dysgraphia_app/features/assessment/assessment_task.dart';
 import 'package:dysgraphia_app/features/canvas/writing_canvas.dart';
 import 'package:dysgraphia_app/features/export/drawing_exporter.dart';
 import 'package:dysgraphia_app/features/dev/dev_tools_page.dart';
+import 'package:dysgraphia_app/core/state/app_data.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../app_flow_test.dart' show MemoryStore;
+
 import 'package:material_ui/material_ui.dart';
 
 void _tabletView(WidgetTester tester) {
@@ -91,12 +96,16 @@ void main() {
     addTearDown(() => tmp.deleteSync(recursive: true));
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: DevToolsPage(
-          exporter: DrawingExporter(baseDirectory: () async => tmp),
+      ProviderScope(
+        overrides: [progressStoreProvider.overrideWithValue(MemoryStore())],
+        child: MaterialApp(
+          home: DevToolsPage(
+            exporter: DrawingExporter(baseDirectory: () async => tmp),
+          ),
         ),
       ),
     );
+    await tester.pumpAndSettle(); // the developer options load first
     await tester.enterText(find.byType(TextField), ' P07 ');
     await tester.tap(find.text('Handwriting check without a profile'));
     await tester.pumpAndSettle();

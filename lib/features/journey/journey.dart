@@ -133,7 +133,9 @@ Challenge? currentChallenge(History h) {
 
 /// Finishing a challenge unlocks the next one, whatever the stars, so a
 /// child who struggles is never stuck; weak letters come back as reviews.
-bool isUnlocked(History h, Challenge c) {
+/// With [all] (a developer option) every challenge is open.
+bool isUnlocked(History h, Challenge c, {bool all = false}) {
+  if (all) return true;
   final current = currentChallenge(h);
   return current == null || c.number <= current.number;
 }

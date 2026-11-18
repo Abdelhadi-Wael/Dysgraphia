@@ -265,7 +265,11 @@ class _PathRow extends ConsumerWidget {
     final x = JourneyPage.nodeX(i);
     final firstInLevel = journey.firstWhere((c) => c.level == challenge.level);
     final stars = challengeStars(history, challenge.number);
-    final unlocked = isUnlocked(history, challenge);
+    final unlocked = isUnlocked(
+      history,
+      challenge,
+      all: ref.watch(appDataProvider).requireValue.dev.unlockAll,
+    );
     final size = isCurrent ? 84.0 : 68.0;
     final nodeTop = (JourneyPage.rowHeight - size) / 2 - 8;
     // The node below is bigger when it is the current challenge.
