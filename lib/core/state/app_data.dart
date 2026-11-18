@@ -126,6 +126,9 @@ class AppDataNotifier extends AsyncNotifier<AppData> {
   Future<void> addChallenge(ChallengeRecord c) =>
       _saveHistory(_data.history.withChallenge(c));
 
+  Future<void> addFingerGame(FingerGameRecord g) =>
+      _saveHistory(_data.history.withGame(g));
+
   Future<void> _saveHistory(History h) async {
     final current = _data.current;
     if (current == null) return; // nobody to save for

@@ -120,4 +120,38 @@ void main() {
       expect(suggestLetters(someWeak), ['s', 'k']);
     });
   });
+
+  test('best finger score only compares the same settings', () {
+    FingerGameRecord g(int hits, String speed) => FingerGameRecord(
+      pattern: 'inOrder',
+      speed: speed,
+      seconds: 60,
+      hits: hits,
+      wrong: 0,
+      missed: 0,
+    );
+    final h = History(games: [g(10, 'slow'), g(25, 'fast'), g(14, 'slow')]);
+    int? best(String speed) =>
+        bestFingerScore(h, pattern: 'inOrder', speed: speed, seconds: 60);
+    expect(best('slow'), 14);
+    expect(best('fast'), 25);
+    expect(best('medium'), isNull);
+  });
+
+  test('a finger game keeps the streak going', () {
+    final h = History(
+      games: [
+        FingerGameRecord(
+          pattern: 'inOrder',
+          speed: 'slow',
+          seconds: 30,
+          hits: 1,
+          wrong: 0,
+          missed: 0,
+          at: DateTime(2026, 11, 18, 9),
+        ),
+      ],
+    );
+    expect(streakDays(h, today: DateTime(2026, 11, 18, 20)), 1);
+  });
 }

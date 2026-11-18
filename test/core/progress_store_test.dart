@@ -70,6 +70,28 @@ void main() {
     expect((await store.loadDevOptions()).unlockAll, isTrue);
   });
 
+  test(
+    'finger game rounds are saved, and older files without them load',
+    () async {
+      final h = History().withGame(
+        FingerGameRecord(
+          pattern: 'mixed',
+          speed: 'fast',
+          seconds: 30,
+          hits: 12,
+          wrong: 2,
+          missed: 3,
+          reactionMs: 1250,
+        ),
+      );
+      await store.saveHistory('p1', h);
+      final g = (await store.loadHistory('p1')).games.single;
+      expect((g.pattern, g.speed, g.seconds), ('mixed', 'fast', 30));
+      expect((g.hits, g.wrong, g.missed, g.reactionMs), (12, 2, 3, 1250));
+      expect(History.fromJson(const {'attempts': []}).games, isEmpty);
+    },
+  );
+
   test('deleting a history removes its file', () async {
     await store.saveHistory('p1', History().withAttempt(attempt('a', 2)));
     await store.deleteHistory('p1');
