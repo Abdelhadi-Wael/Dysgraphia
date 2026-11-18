@@ -142,6 +142,13 @@ class _ChallengePageState extends State<ChallengePage> {
     };
   }
 
+  /// Back one step, e.g. to watch the letter again before copying. The
+  /// step starts fresh; what was already checked stays saved.
+  void _previous() {
+    if (_index == 0 || _step.kind == _Kind.done) return;
+    setState(() => _index--);
+  }
+
   void _report(Attempt a) => widget.onAttempt?.call(a);
 
   @override
@@ -157,13 +164,23 @@ class _ChallengePageState extends State<ChallengePage> {
               : 'Challenge ${_c.number} · letter ${_c.letter}',
         ),
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(28),
+          preferredSize: const Size.fromHeight(44),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            padding: const EdgeInsets.fromLTRB(4, 0, 16, 4),
             // On narrow screens the text shortens with "…" and the bar
             // keeps at least 2/5 of the width.
             child: Row(
               children: [
+                // Always there (greyed out on the first step), so the text
+                // never jumps sideways.
+                IconButton(
+                  key: const Key('previous-step'),
+                  tooltip: 'Previous step',
+                  icon: const Icon(Icons.chevron_left),
+                  onPressed: _index > 0 && step.kind != _Kind.done
+                      ? _previous
+                      : null,
+                ),
                 Flexible(
                   flex: 3,
                   child: Text(
