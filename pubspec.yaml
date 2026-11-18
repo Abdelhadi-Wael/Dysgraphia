@@ -39,6 +39,9 @@ dependencies:
   path_provider: ^2.1.6
   flutter_tts: ^4.2.5
   just_audio: ^0.10.6
+  hand_detection: ^4.3.2
+  camera: ^0.12.2
+  flutter_litert: ^4.2.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -95,3 +98,11 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# hand_detection uses OpenCV (dartcv4), whose iOS build needs this target;
+# Dart only reads it from the app's own pubspec.
+hooks:
+  user_defines:
+    dartcv4:
+      ios:
+        deployment_target: '15.0'

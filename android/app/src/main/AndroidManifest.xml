@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Finger game: the front camera follows the hand. Frames are only
+         processed in memory, never saved. -->
+    <uses-permission android:name="android.permission.CAMERA" />
     <application
         android:label="dysgraphia_app"
         android:name="${applicationName}"
