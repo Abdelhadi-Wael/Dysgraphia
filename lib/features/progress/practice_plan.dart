@@ -40,6 +40,7 @@ int streakDays(History h, {DateTime? today}) {
   final days = {
     for (final a in h.attempts) _day(a.at.toLocal()),
     for (final c in h.checks) _day(c.at.toLocal()),
+    for (final g in h.games) _day(g.at.toLocal()),
   };
   var day = _day((today ?? DateTime.now()).toLocal());
   // Step back by calendar days, not 24 hours (daylight saving changes).
@@ -86,4 +87,21 @@ List<String> suggestLetters(History h, {int count = 3}) {
     if (!pick.contains(c)) pick.add(c);
   }
   return pick;
+}
+
+/// Best finger game score with these settings, if played before.
+int? bestFingerScore(
+  History h, {
+  required String pattern,
+  required String speed,
+  required int seconds,
+}) {
+  int? best;
+  for (final g in h.games) {
+    if (g.pattern != pattern || g.speed != speed || g.seconds != seconds) {
+      continue;
+    }
+    if (best == null || g.score > best) best = g.score;
+  }
+  return best;
 }
