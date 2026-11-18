@@ -110,3 +110,29 @@ including ±15% size and ±0.05 baseline drift):
   word-level tasks.
 * A model trained on collected data could later learn better weights from
   these measures instead of fixed ones.
+
+# Word scoring (version 1)
+
+Code: `lib/features/scoring/word_scorer.dart`, models in
+`lib/features/words/word_templates.dart`. A model word is its letter
+templates placed left to right with a gap of 0.15 line units.
+
+1. **Split into letters.** Strokes are sorted by their left edge. A stroke
+   that overlaps (or comes within 0.04 of) the letter before joins it, so a
+   dot joins its "i" and a crossbar its "t". If that gives too many letters
+   (a "k" written with a gap), the two closest neighbours are joined until
+   the count fits. Too few letters means some touch: the word is then
+   scored as one shape, spacing gets 0.2 and the tip asks for gaps.
+2. **Score each letter** with the letter scorer above.
+3. **Word measures** (each 0-1):
+
+| Measure | Weight | How |
+|---|---|---|
+| Shape | 40% | mean of the letters' shape scores |
+| Size | 20% | half *right size* (mean height ratio, like a letter), half *even size*: `1 - spread / 0.35`, spread = standard deviation / mean of the letters' height ratios |
+| On the line | 20% | mean of the letters' position scores |
+| Spacing | 20% | 70% gap size (each gap, rescaled to model size, scores 1 between 0.07 and 0.35, falling to 0 at 0 and 0.7) and 30% evenness (`1 - (widest - narrowest - 0.1) / 0.3`) |
+
+Stars use the same bars as letters (≥ 0.85 three, ≥ 0.6 two). The tip
+comes from the weakest measure below 0.8 and names the letter when it is
+about one ("Make the "a" the same size as the others").
