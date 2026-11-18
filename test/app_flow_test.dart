@@ -15,6 +15,12 @@ import 'package:material_ui/material_ui.dart';
 class MemoryStore extends ProgressStore {
   List<Profile> profiles = [];
   final histories = <String, History>{};
+  DevOptions dev = const DevOptions();
+
+  @override
+  Future<DevOptions> loadDevOptions() async => dev;
+  @override
+  Future<void> saveDevOptions(DevOptions o) async => dev = o;
 
   @override
   Future<List<Profile>> loadProfiles() async => [...profiles];
@@ -161,6 +167,39 @@ void main() {
     expect(y('challenge-3'), lessThan(y('challenge-2')));
     final banner = tester.getCenter(find.text('Level A · Round letters · 0/6'));
     expect(banner.dy, greaterThan(y('challenge-1')));
+  });
+
+  testWidgets('developer option: unlock every challenge', (tester) async {
+    final store = MemoryStore()..profiles = [Profile.create(name: 'Sami')];
+    await _launch(tester, store);
+    expect(find.byIcon(Icons.lock_outline), findsWidgets);
+
+    await tester.tap(find.text('Me'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Developer tools'), 100);
+    await tester.tap(find.text('Developer tools'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('unlock-all')));
+    await tester.pumpAndSettle();
+    expect(store.dev.unlockAll, isTrue, reason: 'saved for next time');
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Journey'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('challenge-1')), findsOneWidget);
+    expect(find.byIcon(Icons.lock_outline), findsNothing);
+
+    // A later challenge opens, though nothing is finished. The path climbs
+    // upwards: dragging down shows later challenges.
+    await tester.dragUntilVisible(
+      find.byKey(const Key('challenge-12')),
+      find.byKey(const Key('journey-path')),
+      const Offset(0, 300),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('challenge-12')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Challenge 12 ·'), findsOneWidget);
   });
 
   testWidgets('the journey opens on the current challenge', (tester) async {

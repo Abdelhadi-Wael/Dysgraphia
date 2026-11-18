@@ -7,8 +7,9 @@ import '../models/history.dart';
 import '../models/profile.dart';
 
 /// Saves profiles and their history as JSON files on the device, in the
-/// app support folder: `dysgraphia/profiles.json` and
-/// `dysgraphia/history_PROFILEID.json`.
+/// app support folder: `dysgraphia/profiles.json`,
+/// `dysgraphia/history_PROFILEID.json` and `dysgraphia/dev.json` (developer
+/// options, for the whole device).
 /// Plain files keep it simple, offline and easy to inspect; a backend can
 /// sync the same JSON later.
 class ProgressStore {
@@ -41,6 +42,11 @@ class ProgressStore {
     'profiles': [for (final p in profiles) p.toJson()],
   });
 
+  Future<DevOptions> loadDevOptions() async =>
+      DevOptions.fromJson(await _read('dev.json') ?? const {});
+
+  Future<void> saveDevOptions(DevOptions o) => _write('dev.json', o.toJson());
+
   Future<History> loadHistory(String profileId) async {
     final j = await _read('history_$profileId.json');
     return j == null ? History.empty : History.fromJson(j);
@@ -70,4 +76,18 @@ class ProgressStore {
     await tmp.writeAsString(jsonEncode(json), flush: true);
     await tmp.rename(f.path);
   }
+}
+
+/// Developer options: shortcuts for testing and demos, for every profile on
+/// the device.
+class DevOptions {
+  const DevOptions({this.unlockAll = false});
+
+  /// Every journey challenge can be opened, finished or not.
+  final bool unlockAll;
+
+  Map<String, dynamic> toJson() => {'unlockAll': unlockAll};
+
+  factory DevOptions.fromJson(Map<String, dynamic> j) =>
+      DevOptions(unlockAll: j['unlockAll'] as bool? ?? false);
 }

@@ -3,7 +3,12 @@ import 'package:dysgraphia_app/features/dev/dev_tools_page.dart';
 import 'package:dysgraphia_app/features/templates/letter_gallery_page.dart';
 import 'package:dysgraphia_app/features/templates/letter_page.dart';
 import 'package:dysgraphia_app/features/templates/letter_template_view.dart';
+import 'package:dysgraphia_app/core/state/app_data.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../app_flow_test.dart' show MemoryStore;
+
 import 'package:material_ui/material_ui.dart';
 
 void _bigView(WidgetTester tester) {
@@ -17,7 +22,12 @@ void main() {
     tester,
   ) async {
     _bigView(tester);
-    await tester.pumpWidget(const MaterialApp(home: DevToolsPage()));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [progressStoreProvider.overrideWithValue(MemoryStore())],
+        child: const MaterialApp(home: DevToolsPage()),
+      ),
+    );
     await tester.tap(find.text('Letter gallery'));
     await tester.pumpAndSettle();
 
