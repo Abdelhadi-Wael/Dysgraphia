@@ -1,6 +1,9 @@
+import 'dart:math' as math;
+
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/audio/app_audio.dart';
+import '../../core/models/guide_geometry.dart';
 import 'letter_template_view.dart';
 import 'letter_templates.dart';
 import 'stroke_timeline.dart';
@@ -66,17 +69,33 @@ class _WatchViewState extends State<WatchView>
         ),
         const SizedBox(height: 12),
         Expanded(
-          child: Card(
-            clipBehavior: Clip.antiAlias,
-            child: AnimatedBuilder(
-              animation: _animation,
-              builder: (context, _) => LetterTemplateView(
-                key: const Key('letter-animation'),
-                template: widget.template,
-                timeline: _timeline,
-                seconds: _animation.value * _timeline.totalSeconds,
-              ),
-            ),
+          // As tall as the space allows, but never so tall that a wide
+          // template (a word) no longer fits across.
+          child: LayoutBuilder(
+            builder: (context, box) {
+              final aspect =
+                  (widget.template.width + 1.1) /
+                  GuideGeometry.heightForUnit(1);
+              final height = math.min(box.maxHeight, box.maxWidth / aspect);
+              return Center(
+                child: SizedBox(
+                  height: height,
+                  width: box.maxWidth,
+                  child: Card(
+                    clipBehavior: Clip.antiAlias,
+                    child: AnimatedBuilder(
+                      animation: _animation,
+                      builder: (context, _) => LetterTemplateView(
+                        key: const Key('letter-animation'),
+                        template: widget.template,
+                        timeline: _timeline,
+                        seconds: _animation.value * _timeline.totalSeconds,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
         ),
         const SizedBox(height: 12),
