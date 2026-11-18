@@ -6,6 +6,7 @@ import 'package:dysgraphia_app/features/exercises/trace/trace_view.dart';
 import 'package:dysgraphia_app/features/journey/challenge_page.dart';
 import 'package:dysgraphia_app/features/journey/journey.dart';
 import 'package:dysgraphia_app/features/templates/warmup_shapes.dart';
+import 'package:dysgraphia_app/features/words/word_templates.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -91,7 +92,7 @@ void main() {
 
     expect(find.text('Challenge 2 · letter a'), findsOneWidget);
     expect(_stepLabel(tester), 'Step 1 of 5 · Warm-up: Circles');
-    await _trace(tester, challenge.warmUp);
+    await _trace(tester, challenge.warmUp!);
     await tester.tap(find.text('Next: letter a'));
     await tester.pumpAndSettle();
 
@@ -143,5 +144,57 @@ void main() {
       MaterialApp(home: ChallengePage(challenge: challengeNumber(1))),
     );
     expect(_stepLabel(tester), 'Step 1 of 4 · Warm-up: Circles');
+  });
+
+  testWidgets('a word challenge: watch and write each word, then review', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final attempts = <Attempt>[];
+    int? completedStars;
+    final challenge = journey.firstWhere((c) => c.isWords);
+    expect(challenge.words, ['word-go', 'word-dog']);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ChallengePage(
+          challenge: challenge,
+          review: 'a',
+          onAttempt: attempts.add,
+          onComplete: (s) => completedStars = s,
+        ),
+      ),
+    );
+    expect(find.text('Challenge 27 · go, dog'), findsOneWidget);
+
+    for (final (i, w) in ['go', 'dog'].indexed) {
+      expect(_stepLabel(tester), 'Step ${i * 2 + 1} of 5 · Watch: $w');
+      await tester.tap(find.text('Write it'));
+      await tester.pumpAndSettle();
+      expect(_stepLabel(tester), 'Step ${i * 2 + 2} of 5 · Write: $w');
+      await _write(
+        tester,
+        find.byKey(const Key('word-canvas')),
+        practiceWords['word-$w']!.drawing,
+        dx: 0.3,
+      );
+      await tester.tap(find.text('Check'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(i == 0 ? 'Next word: dog' : 'Next: review'));
+      await tester.pumpAndSettle();
+    }
+
+    expect(_stepLabel(tester), 'Step 5 of 5 · Review');
+    await _copy(tester, 'a', 1);
+    await tester.tap(find.text('Finish'));
+    await tester.pumpAndSettle();
+    expect(find.text('Challenge 27 complete!'), findsOneWidget);
+    expect(completedStars, 3);
+    expect(attempts.map((a) => '${a.letter}:${a.kind.name}'), [
+      'word-go:word',
+      'word-dog:word',
+      'a:copy',
+    ]);
   });
 }

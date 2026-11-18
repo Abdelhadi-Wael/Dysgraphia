@@ -12,24 +12,31 @@ import '../templates/letter_page.dart';
 import '../templates/letter_templates.dart';
 import '../templates/warmup_shapes.dart';
 import '../templates/watch_view.dart';
+import '../words/word_templates.dart';
+import '../words/word_view.dart';
 import 'journey.dart';
 
-enum _Kind { warmUp, watch, trace, copy, review, done }
+enum _Kind { warmUp, watch, trace, copy, watchWord, writeWord, review, done }
 
 class _Step {
-  const _Step(this.kind, this.template, this.title);
+  const _Step(this.kind, this.template, this.title, {this.word});
 
   final _Kind kind;
   final LetterTemplate template;
   final String title;
+
+  /// For word steps.
+  final WordTemplate? word;
 }
 
 /// One challenge of the writing journey, as a guided session:
 /// warm-up shape (trace) → new letter (watch, trace, copy ×3) → review of
-/// an earlier letter (copy once) → celebration.
+/// an earlier letter (copy once) → celebration. A word challenge instead
+/// watches and writes each of its words, then reviews a letter.
 ///
 /// Saves nothing itself: results go to [onAttempt], and [onComplete] gets
-/// the challenge's stars (best copy of the new letter) at the end.
+/// the challenge's stars at the end: the best copy of the new letter, or
+/// for words the average of each word's best.
 class ChallengePage extends StatefulWidget {
   const ChallengePage({
     super.key,
@@ -55,30 +62,62 @@ class ChallengePage extends StatefulWidget {
 }
 
 class _ChallengePageState extends State<ChallengePage> {
+  Challenge get _c => widget.challenge;
+
   late final List<_Step> _steps = [
-    _Step(
-      _Kind.warmUp,
-      templateFor(widget.challenge.warmUp),
-      'Warm-up: ${templateFor(widget.challenge.warmUp).label}',
-    ),
-    _Step(_Kind.watch, _letter, 'Watch'),
-    _Step(_Kind.trace, _letter, 'Trace'),
-    _Step(_Kind.copy, _letter, 'Copy'),
+    if (_c.isWords)
+      for (final id in _c.words) ...[
+        _Step(
+          _Kind.watchWord,
+          practiceWords[id]!.model,
+          'Watch: ${practiceWordText(id)}',
+          word: practiceWords[id],
+        ),
+        _Step(
+          _Kind.writeWord,
+          practiceWords[id]!.model,
+          'Write: ${practiceWordText(id)}',
+          word: practiceWords[id],
+        ),
+      ]
+    else ...[
+      _Step(
+        _Kind.warmUp,
+        templateFor(_c.warmUp!),
+        'Warm-up: ${templateFor(_c.warmUp!).label}',
+      ),
+      _Step(_Kind.watch, templateFor(_c.letter!), 'Watch'),
+      _Step(_Kind.trace, templateFor(_c.letter!), 'Trace'),
+      _Step(_Kind.copy, templateFor(_c.letter!), 'Copy'),
+    ],
     if (widget.review != null)
       _Step(_Kind.review, templateFor(widget.review!), 'Review'),
-    _Step(_Kind.done, _letter, 'Done'),
+    _Step(_Kind.done, _steps0Template, 'Done'),
   ];
 
-  late final _letter = templateFor(widget.challenge.letter);
+  LetterTemplate get _steps0Template => _c.isWords
+      ? practiceWords[_c.words.first]!.model
+      : templateFor(_c.letter!);
+
   var _index = 0;
   var _bestStars = 0;
 
+  /// Best stars per word, for word challenges.
+  final _wordStars = <String, int>{};
+
   _Step get _step => _steps[_index];
+
+  int get _stars {
+    if (!_c.isWords) return math.max(1, _bestStars);
+    if (_wordStars.isEmpty) return 1;
+    final sum = _c.words.map((w) => _wordStars[w] ?? 1).reduce((a, b) => a + b);
+    return math.max(1, (sum / _c.words.length).round());
+  }
 
   void _next() {
     setState(() => _index++);
     if (_step.kind == _Kind.done) {
-      final stars = math.max(1, _bestStars);
+      final stars = _stars;
       widget.onComplete?.call(stars);
       final audio = AppAudioScope.of(context);
       audio.play(Sfx.success);
@@ -92,9 +131,11 @@ class _ChallengePageState extends State<ChallengePage> {
   String _nextLabel() {
     final following = _steps[_index + 1];
     return switch (following.kind) {
-      _Kind.watch => 'Next: ${_letter.label.toLowerCase()}',
+      _Kind.watch => 'Next: ${following.template.label.toLowerCase()}',
       _Kind.trace => 'Trace it',
       _Kind.copy => 'Copy it',
+      _Kind.watchWord => 'Next word: ${following.word!.word}',
+      _Kind.writeWord => 'Write it',
       _Kind.review => 'Next: review',
       _Kind.done => 'Finish',
       _Kind.warmUp => 'Next',
@@ -111,7 +152,9 @@ class _ChallengePageState extends State<ChallengePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Challenge ${widget.challenge.number} · ${_letter.label.toLowerCase()}',
+          _c.isWords
+              ? 'Challenge ${_c.number} · ${_c.name}'
+              : 'Challenge ${_c.number} · letter ${_c.letter}',
         ),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(28),
@@ -153,9 +196,13 @@ class _ChallengePageState extends State<ChallengePage> {
         // Scrolls on short screens (phone in landscape).
         child: FitOrScroll(
           minHeight: switch (step.kind) {
-            _Kind.watch || _Kind.done => ExerciseHeights.watch,
+            _Kind.watch ||
+            _Kind.watchWord ||
+            _Kind.done => ExerciseHeights.watch,
             _Kind.warmUp || _Kind.trace => ExerciseHeights.trace,
-            _Kind.copy || _Kind.review => ExerciseHeights.copy,
+            _Kind.copy ||
+            _Kind.writeWord ||
+            _Kind.review => ExerciseHeights.copy,
           },
           child: KeyedSubtree(key: ValueKey(_index), child: _body(step)),
         ),
@@ -183,6 +230,31 @@ class _ChallengePageState extends State<ChallengePage> {
       onNext: _next,
       nextLabel: _nextLabel(),
     ),
+    _Kind.watchWord => WatchView(
+      template: step.template,
+      intro: 'Watch how to write the word ${step.word!.word}.',
+      onNext: _next,
+      nextLabel: _nextLabel(),
+    ),
+    _Kind.writeWord => WordView(
+      word: step.word!,
+      onChecked: (d, s) {
+        final id = step.word!.id;
+        _wordStars[id] = math.max(_wordStars[id] ?? 0, s.stars);
+        _report(
+          Attempt(
+            letter: id,
+            kind: PracticeKind.word,
+            stars: s.stars,
+            overall: s.overall,
+            score: s.toJson(),
+            drawing: d,
+          ),
+        );
+      },
+      onNext: _next,
+      nextLabel: _nextLabel(),
+    ),
     _Kind.copy || _Kind.review => CopyView(
       template: step.template,
       attempts: step.kind == _Kind.copy ? 3 : 1,
@@ -197,7 +269,7 @@ class _ChallengePageState extends State<ChallengePage> {
     ),
     _Kind.done => _Celebration(
       challenge: widget.challenge,
-      stars: math.max(1, _bestStars),
+      stars: _stars,
       hasNext: widget.hasNext,
     ),
   };

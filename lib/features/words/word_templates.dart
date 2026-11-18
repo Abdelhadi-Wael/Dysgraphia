@@ -75,3 +75,6 @@ final Map<String, WordTemplate> practiceWords = {
 };
 
 bool isWordId(String id) => id.startsWith('word-');
+
+/// The word itself from its id: "word-cat" → "cat".
+String practiceWordText(String id) => id.replaceFirst('word-', '');

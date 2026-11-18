@@ -108,6 +108,8 @@ void main() {
     ),
     'challenge': () =>
         ChallengePage(challenge: challengeNumber(9), review: 'a'),
+    'word challenge': () =>
+        ChallengePage(challenge: challengeNumber(31), review: 'a'),
     'check shapes': () => AssessmentPage(tasks: [defaultAssessmentTasks[0]]),
     'check sentence': () => AssessmentPage(tasks: [defaultAssessmentTasks[3]]),
     'dev tools': () => const DevToolsPage(),
