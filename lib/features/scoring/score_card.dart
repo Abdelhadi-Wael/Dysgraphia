@@ -1,16 +1,38 @@
 import 'package:material_ui/material_ui.dart';
 
 import 'letter_scorer.dart';
+import 'word_scorer.dart';
 
-/// Stars, one tip, and an optional breakdown of the four measures.
+/// Stars, one tip, and a breakdown of the measures behind them.
 class ScoreCard extends StatefulWidget {
-  const ScoreCard({super.key, required this.score, this.hasDescender = false});
+  /// A letter's score. With [hasDescender] (g, j, p, q, y), tips about
+  /// position talk about the bottom line.
+  ScoreCard({super.key, required LetterScore score, bool hasDescender = false})
+    : stars = score.stars,
+      tip = tipText(score.tip, hasDescender: hasDescender),
+      measures = [
+        ('Shape', score.shape),
+        ('Size', score.size),
+        ('On the line', score.position),
+        ('Strokes', score.strokes),
+      ];
 
-  final LetterScore score;
+  /// A word's score.
+  ScoreCard.word({super.key, required WordScore score})
+    : stars = score.stars,
+      tip = score.tip.text,
+      measures = [
+        ('Shape', score.shape),
+        ('Size', score.size),
+        ('On the line', score.line),
+        ('Spacing', score.spacing),
+      ];
 
-  /// The letter goes below the baseline (g, j, p, q, y): tips about
-  /// position then talk about the bottom line.
-  final bool hasDescender;
+  final int stars;
+  final String tip;
+
+  /// Label and 0..1 value of each measure, shown in the details.
+  final List<(String, double)> measures;
 
   static String tipText(ScoreTip tip, {bool hasDescender = false}) =>
       switch (tip) {
@@ -41,7 +63,6 @@ class _ScoreCardState extends State<ScoreCard> {
   /// The breakdown opens in a panel from the bottom, so the card itself
   /// never changes height and nothing around it moves.
   void _showDetails() {
-    final s = widget.score;
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -52,15 +73,10 @@ class _ScoreCardState extends State<ScoreCard> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                ScoreCard.tipText(s.tip, hasDescender: widget.hasDescender),
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
+              Text(widget.tip, style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 12),
-              _bar(context, 'Shape', s.shape),
-              _bar(context, 'Size', s.size),
-              _bar(context, 'On the line', s.position),
-              _bar(context, 'Strokes', s.strokes),
+              for (final (label, value) in widget.measures)
+                _bar(context, label, value),
             ],
           ),
         ),
@@ -70,7 +86,7 @@ class _ScoreCardState extends State<ScoreCard> {
 
   @override
   Widget build(BuildContext context) {
-    final s = widget.score;
+    final stars = widget.stars;
     final text = Theme.of(context).textTheme;
     return Card(
       child: SizedBox(
@@ -81,15 +97,15 @@ class _ScoreCardState extends State<ScoreCard> {
             children: [
               for (var i = 1; i <= 3; i++)
                 Icon(
-                  i <= s.stars ? Icons.star_rounded : Icons.star_border_rounded,
-                  key: Key('star-$i-${i <= s.stars ? 'on' : 'off'}'),
+                  i <= stars ? Icons.star_rounded : Icons.star_border_rounded,
+                  key: Key('star-$i-${i <= stars ? 'on' : 'off'}'),
                   color: Colors.amber.shade600,
                   size: 30,
                 ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  ScoreCard.tipText(s.tip, hasDescender: widget.hasDescender),
+                  widget.tip,
                   key: const Key('score-tip'),
                   style: text.titleSmall,
                   maxLines: 2,
