@@ -3,6 +3,7 @@ import 'package:dysgraphia_app/core/models/stroke.dart';
 import 'package:dysgraphia_app/features/journey/journey.dart';
 import 'package:dysgraphia_app/features/progress/practice_plan.dart';
 import 'package:dysgraphia_app/features/templates/warmup_shapes.dart';
+import 'package:dysgraphia_app/features/words/word_templates.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Attempt copy(String letter, int stars, {DateTime? at}) => Attempt(
@@ -23,22 +24,37 @@ History done(List<int> numbers, {List<Attempt> attempts = const []}) => History(
 );
 
 void main() {
-  test('one challenge per letter, in teaching order, numbered from 1', () {
-    expect(journey, hasLength(26));
-    expect(journey.map((c) => c.letter).join(), teachingOrder);
-    expect(journey.map((c) => c.number), [for (var i = 1; i <= 26; i++) i]);
+  test('one challenge per letter in teaching order, then words', () {
+    expect(journey, hasLength(34));
+    expect(journey.take(26).map((c) => c.letter).join(), teachingOrder);
+    expect(journey.map((c) => c.number), [for (var i = 1; i <= 34; i++) i]);
+    final words = journey.skip(26).toList();
+    expect(words.every((c) => c.isWords && c.level == wordsLevel), isTrue);
+    expect(words.first.name, 'go, dog');
+    expect(words.expand((c) => c.words), hasLength(16));
   });
 
-  test('levels A, B, C with 6, 9 and 11 challenges', () {
+  test('every word only uses letters taught before it', () {
+    for (final (i, g) in wordGroups.indexed) {
+      final taught = journeyLevels.take(i + 1).map((l) => l.letters).join();
+      for (final w in g.words) {
+        for (final c in w.split('')) {
+          expect(taught, contains(c), reason: w);
+        }
+      }
+    }
+  });
+
+  test('levels A, B, C, D with 6, 9, 11 and 8 challenges', () {
     final sizes = {
       for (final l in journeyLevels)
         l.id: journey.where((c) => c.level == l).length,
     };
-    expect(sizes, {'A': 6, 'B': 9, 'C': 11});
+    expect(sizes, {'A': 6, 'B': 9, 'C': 11, 'D': 8});
   });
 
   test('every warm-up exists', () {
-    for (final c in journey) {
+    for (final c in journey.where((c) => !c.isWords)) {
       expect(warmUpShapes.containsKey(c.warmUp), isTrue, reason: c.letter);
     }
   });
@@ -74,9 +90,9 @@ void main() {
       final h = done([1, 2, 3]);
       expect(levelProgress(h, journeyLevels[0]), (3, 6));
       expect(levelProgress(h, journeyLevels[1]), (0, 9));
-      final all = done([for (var i = 1; i <= 26; i++) i]);
+      final all = done([for (var i = 1; i <= 34; i++) i]);
       expect(currentChallenge(all), isNull);
-      expect(isUnlocked(all, challengeNumber(26)), isTrue);
+      expect(isUnlocked(all, challengeNumber(34)), isTrue);
     });
   });
 
