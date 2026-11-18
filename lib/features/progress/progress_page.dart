@@ -50,6 +50,14 @@ class ProgressPage extends ConsumerWidget {
                     label: 'Writing checks',
                     value: '${h.checks.length}',
                   ),
+                  StatCard(
+                    key: const Key('finger-best'),
+                    icon: Icons.back_hand_outlined,
+                    label: 'Finger taps best',
+                    value: h.games.isEmpty
+                        ? '–'
+                        : '${h.games.map((g) => g.score).reduce((a, b) => a > b ? a : b)}',
+                  ),
                 ],
               ),
               const SizedBox(height: 24),
