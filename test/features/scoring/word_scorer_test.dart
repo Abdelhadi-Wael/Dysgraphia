@@ -103,8 +103,18 @@ void main() {
 
   test('a wrong letter is named', () {
     final s = scorer.score(write('pin', swap: {2: 'o'}), WordTemplate('pin'));
-    expect(s.tip.kind, WordTipKind.shape);
+    expect(s.tip.kind, WordTipKind.looks);
     expect(s.tip.letter, 'n');
+  });
+
+  test('a letter written backwards is named', () {
+    final w = WordTemplate('dog');
+    final strokes = write('dog').strokes.toList();
+    // The "o" (third stroke) clockwise.
+    strokes[2] = Stroke(strokes[2].points.reversed.toList());
+    final s = scorer.score(Drawing(strokes), w);
+    expect(s.tip.kind, WordTipKind.movement);
+    expect(s.tip.letter, 'o');
   });
 
   test('a k written with a gap is still one letter', () {

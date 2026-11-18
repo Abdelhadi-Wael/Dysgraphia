@@ -41,7 +41,7 @@ void main() {
   test('a slightly wobbly letter in the right place still gets 3 stars', () {
     final s = scorer.score(transform(tpl('a'), wobble: 0.02), tpl('a'));
     expect(s.stars, 3);
-    expect(s.shape, greaterThan(0.9));
+    expect(s.looks, greaterThan(0.9));
   });
 
   test('moving sideways does not matter', () {
@@ -49,25 +49,81 @@ void main() {
     expect(s.overall, closeTo(1, 1e-9));
   });
 
-  test('a different letter scores low on shape', () {
+  test('a different letter scores low on looks', () {
     final s = scorer.score(tpl('l'), tpl('o'));
-    expect(s.shape, lessThan(0.3));
-    expect(s.tip, ScoreTip.shape);
+    expect(s.looks, lessThan(0.3));
+    expect(s.tip, ScoreTip.looks);
     expect(s.stars, 1);
   });
 
-  test('o written clockwise: right shape, wrong way, low shape score', () {
+  test('similar letters are still told apart', () {
+    for (final (a, b) in [('b', 'h'), ('l', 'i'), ('g', 'q'), ('n', 'u')]) {
+      expect(scorer.score(tpl(a), tpl(b)).looks, lessThan(0.8), reason: a + b);
+    }
+  });
+
+  test('o written clockwise looks right but was written the wrong way', () {
     final cw = Drawing([
       Stroke(tpl('o').strokes.single.points.reversed.toList()),
     ]);
-    expect(scorer.score(cw, tpl('o')).shape, lessThan(0.1));
+    final s = scorer.score(cw, tpl('o'));
+    expect(s.looks, closeTo(1, 1e-6));
+    expect(s.movement, 0.5);
+    expect(s.issue, MovementIssue.direction);
+    expect(s.tip, ScoreTip.roundDirection);
+    expect(s.stars, 3, reason: 'a good-looking letter keeps its stars');
+  });
+
+  test('every stroke reversed is caught, for every letter and shape', () {
+    for (final t in [...latinLowercase.values]) {
+      final rev = Drawing([
+        for (final s in t.drawing.strokes) Stroke(s.points.reversed.toList()),
+      ]);
+      expect(
+        scorer.score(rev, t.drawing).issue,
+        MovementIssue.direction,
+        reason: t.letter,
+      );
+    }
+  });
+
+  test('strokes in the wrong order are caught', () {
+    for (final t in latinLowercase.values.where((t) => t.strokeCount > 1)) {
+      final swapped = Drawing(t.drawing.strokes.reversed.toList());
+      expect(
+        scorer.score(swapped, t.drawing).issue,
+        MovementIssue.order,
+        reason: t.letter,
+      );
+    }
+    final i = tpl('i');
+    final dotFirst = Drawing(i.strokes.reversed.toList());
+    expect(scorer.score(dotFirst, i).tip, ScoreTip.dotLast);
+  });
+
+  test('an o started at the bottom is told where to start', () {
+    final o = tpl('o').strokes.single.points;
+    final half = o.length ~/ 2;
+    final fromBottom = Drawing([
+      Stroke([...o.sublist(half), ...o.sublist(1, half + 1)]),
+    ]);
+    final s = scorer.score(fromBottom, tpl('o'));
+    expect(s.issue, MovementIssue.start);
+    expect(s.tip, ScoreTip.start);
+  });
+
+  test('wobbly writing is not mistaken for a wrong movement', () {
+    for (final t in latinLowercase.values) {
+      final s = scorer.score(transform(t.drawing, wobble: 0.03), t.drawing);
+      expect(s.issue, MovementIssue.none, reason: t.letter);
+    }
   });
 
   test('too big and too small are named, with the right size ratio', () {
     // Scaled around the origin, which sits on the baseline.
     final big = scorer.score(transform(tpl('o'), k: 1.6), tpl('o'));
     expect(big.sizeRatio, closeTo(1.6, 1e-6));
-    expect(big.shape, closeTo(1, 1e-6), reason: 'shape ignores size');
+    expect(big.looks, closeTo(1, 1e-6), reason: 'looks ignore size');
     expect(big.tip, ScoreTip.tooBig);
 
     final small = scorer.score(transform(tpl('o'), k: 0.5), tpl('o'));
@@ -100,13 +156,14 @@ void main() {
     ]);
     final s = scorer.score(oneStroke, n);
     expect(s.strokeDifference, -1);
-    expect(s.strokes, 0.6);
+    expect(s.movement, 0.5);
+    expect(s.tip, ScoreTip.strokeCount);
   });
 
   test('score survives a JSON export', () {
     final j = scorer.score(transform(tpl('a'), k: 1.2), tpl('a')).toJson();
     expect(j['stars'], isA<int>());
     expect(j['tip'], 'tooBig');
-    expect(j.keys, containsAll(['shape', 'size', 'position', 'strokes']));
+    expect(j.keys, containsAll(['looks', 'size', 'position', 'movement']));
   });
 }

@@ -11,10 +11,10 @@ class ScoreCard extends StatefulWidget {
     : stars = score.stars,
       tip = tipText(score.tip, hasDescender: hasDescender),
       measures = [
-        ('Shape', score.shape),
+        ('Looks right', score.looks),
         ('Size', score.size),
         ('On the line', score.position),
-        ('Strokes', score.strokes),
+        ('Written the right way', score.movement),
       ];
 
   /// A word's score.
@@ -22,10 +22,11 @@ class ScoreCard extends StatefulWidget {
     : stars = score.stars,
       tip = score.tip.text,
       measures = [
-        ('Shape', score.shape),
+        ('Looks right', score.looks),
         ('Size', score.size),
         ('On the line', score.line),
         ('Spacing', score.spacing),
+        ('Written the right way', score.movement),
       ];
 
   final int stars;
@@ -37,7 +38,7 @@ class ScoreCard extends StatefulWidget {
   static String tipText(ScoreTip tip, {bool hasDescender = false}) =>
       switch (tip) {
         ScoreTip.none => 'Great job!',
-        ScoreTip.shape => 'Look closely at the model and match its shape',
+        ScoreTip.looks => 'Look closely at the model and match its shape',
         ScoreTip.tooBig => 'Make it a little smaller',
         ScoreTip.tooSmall => 'Make it a little bigger',
         ScoreTip.tooHigh =>
@@ -49,6 +50,12 @@ class ScoreCard extends StatefulWidget {
               ? 'Keep the tail on the bottom line'
               : 'Keep the letter on the baseline, not below it',
         ScoreTip.strokeCount => 'Lift your pen like in the animation',
+        ScoreTip.order => 'Write the parts in the order of the animation',
+        ScoreTip.dotLast => 'Do the dot last',
+        ScoreTip.direction => 'Go the other way, like in the animation',
+        ScoreTip.roundDirection =>
+          'Go round the other way, like in the animation',
+        ScoreTip.start => 'Start where the animation starts',
       };
 
   /// Height of the card's content; with the card's margins the card takes
@@ -124,7 +131,7 @@ class _ScoreCardState extends State<ScoreCard> {
     padding: const EdgeInsets.symmetric(vertical: 4),
     child: Row(
       children: [
-        SizedBox(width: 110, child: Text(label)),
+        SizedBox(width: 160, child: Text(label)),
         Expanded(
           child: LinearProgressIndicator(
             value: value,

@@ -108,3 +108,45 @@ double dtw(List<Pt> a, List<Pt> b) {
   }
   return prev[m] / prevLen[m];
 }
+
+/// How different two point sets look, ignoring the order of the points:
+/// for each point, the distance to the nearest point of the other set.
+/// Averages the worst quarter of those distances (so a missing or extra
+/// part counts, not only the overall outline) and takes the worse of the
+/// two directions. 0 = the same picture, however it was drawn.
+double lookDistance(List<Pt> a, List<Pt> b) {
+  double oneWay(List<Pt> from, List<Pt> to) {
+    final near = [
+      for (final p in from) to.map((q) => _dist(p, q)).reduce(math.min),
+    ]..sort();
+    final worst = near.sublist(near.length * 3 ~/ 4);
+    return worst.reduce((x, y) => x + y) / worst.length;
+  }
+
+  return math.max(oneWay(a, b), oneWay(b, a));
+}
+
+/// Each stroke resampled to [perStroke] points, all normalised together
+/// (one bounding box for the whole drawing, larger side 1), so strokes
+/// keep their places relative to each other.
+List<List<Pt>> normaliseStrokes(Drawing d, {int perStroke = 24}) {
+  final strokes = [for (final s in d.strokes) resampleStroke(s, perStroke)];
+  final flat = normalise([for (final s in strokes) ...s]);
+  return [
+    for (var i = 0; i < strokes.length; i++)
+      flat.sublist(i * perStroke, (i + 1) * perStroke),
+  ];
+}
+
+double distance(Pt a, Pt b) => _dist(a, b);
+
+/// Signed area enclosed by a stroke (shoelace formula), in screen
+/// coordinates where y grows down: positive = clockwise on screen.
+double signedArea(List<Pt> pts) {
+  var sum = 0.0;
+  for (var i = 0; i < pts.length; i++) {
+    final a = pts[i], b = pts[(i + 1) % pts.length];
+    sum += a.x * b.y - b.x * a.y;
+  }
+  return sum / 2;
+}

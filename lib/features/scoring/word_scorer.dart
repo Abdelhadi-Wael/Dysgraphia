@@ -7,7 +7,8 @@ import 'letter_scorer.dart';
 /// What to work on next in a word.
 enum WordTipKind {
   none,
-  shape, // one letter does not look like the model
+  looks, // one letter does not look like the model
+  movement, // one letter was written the wrong way
   tooBig,
   tooSmall,
   unevenSize, // one letter is bigger or smaller than the others
@@ -36,7 +37,8 @@ class WordTip {
     final tail = letter != null && 'gjpqy'.contains(letter!);
     return switch (kind) {
       WordTipKind.none => 'Great job!',
-      WordTipKind.shape => 'Look closely at the $l in the model',
+      WordTipKind.looks => 'Look closely at the $l in the model',
+      WordTipKind.movement => 'Write the $l the way the animation shows',
       WordTipKind.tooBig => 'Make the word a little smaller',
       WordTipKind.tooSmall => 'Make the word a little bigger',
       WordTipKind.unevenSize => 'Make the $l the same size as the others',
@@ -59,7 +61,8 @@ class WordTip {
 /// docs/scoring.md.
 class WordScore {
   const WordScore({
-    required this.shape,
+    required this.looks,
+    required this.movement,
     required this.size,
     required this.line,
     required this.spacing,
@@ -68,7 +71,7 @@ class WordScore {
     required this.tip,
   });
 
-  final double shape, size, line, spacing;
+  final double looks, movement, size, line, spacing;
 
   /// Each letter's own score, left to right, or null when the writing could
   /// not be split into the word's letters (they touch).
@@ -79,10 +82,17 @@ class WordScore {
 
   final WordTip tip;
 
-  static const weights = (shape: 0.4, size: 0.2, line: 0.2, spacing: 0.2);
+  static const weights = (
+    looks: 0.35,
+    movement: 0.1,
+    size: 0.15,
+    line: 0.2,
+    spacing: 0.2,
+  );
 
   double get overall =>
-      shape * weights.shape +
+      looks * weights.looks +
+      movement * weights.movement +
       size * weights.size +
       line * weights.line +
       spacing * weights.spacing;
@@ -92,7 +102,8 @@ class WordScore {
   Map<String, dynamic> toJson() => {
     'overall': _r(overall),
     'stars': stars,
-    'shape': _r(shape),
+    'looks': _r(looks),
+    'movement': _r(movement),
     'size': _r(size),
     'line': _r(line),
     'spacing': _r(spacing),
@@ -153,7 +164,8 @@ class WordScorer {
       return w;
     }
 
-    final shape = _mean(scores.map((s) => s.shape));
+    final looks = _mean(scores.map((s) => s.looks));
+    final movement = _mean(scores.map((s) => s.movement));
 
     // Size: right overall, and the same for every letter.
     final ratios = [for (final s in scores) s.sizeRatio];
@@ -184,12 +196,15 @@ class WordScorer {
         : 0.7 * _mean(gapScores) + 0.3 * evenGaps;
 
     // One tip, for the weakest measure below the bar.
-    final w = worst((s) => s.shape);
+    final w = worst((s) => s.looks);
+    final moveWorst = worst((s) => s.movement);
     final sizeOdd = _oddOneOut(ratios);
     final lineWorst = worst((s) => s.position);
     final gapWorst = gaps.isEmpty ? 0 : _argMin(gapScores);
     final candidates = <(double, WordTip)>[
-      (shape, WordTip(WordTipKind.shape, letter: letter(w))),
+      // Looks and movement are about single letters: judged by the worst
+      // one, not the mean, so one wrong letter is worth a tip.
+      (scores[w].looks, WordTip(WordTipKind.looks, letter: letter(w))),
       (
         line,
         WordTip(
@@ -214,6 +229,10 @@ class WordScorer {
         ),
         (evenGaps, const WordTip(WordTipKind.unevenSpacing)),
       ],
+      (
+        scores[moveWorst].movement,
+        WordTip(WordTipKind.movement, letter: letter(moveWorst)),
+      ),
     ];
     var tip = WordTip.none;
     var bar = tipBelow;
@@ -225,7 +244,8 @@ class WordScorer {
     }
 
     return WordScore(
-      shape: shape,
+      looks: looks,
+      movement: movement,
       size: size,
       line: line,
       spacing: spacing,
@@ -240,7 +260,8 @@ class WordScorer {
   WordScore _touching(Drawing written, WordTemplate word) {
     final s = letterScorer.score(written, word.drawing);
     return WordScore(
-      shape: s.shape,
+      looks: s.looks,
+      movement: s.movement,
       size: s.size,
       line: s.position,
       spacing: 0.2,
