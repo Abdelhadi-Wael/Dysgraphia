@@ -74,10 +74,19 @@ class ProgressPage extends ConsumerWidget {
                     children: [
                       for (final a in recent)
                         ListTile(
-                          leading: CircleAvatar(child: Text(a.letter)),
-                          title: Text(
-                            a.kind == PracticeKind.copy ? 'Copied' : 'Traced',
+                          leading: CircleAvatar(
+                            child: Padding(
+                              padding: const EdgeInsets.all(4),
+                              child: FittedBox(
+                                child: Text(a.letter.replaceFirst('word-', '')),
+                              ),
+                            ),
                           ),
+                          title: Text(switch (a.kind) {
+                            PracticeKind.copy => 'Copied',
+                            PracticeKind.trace => 'Traced',
+                            PracticeKind.word => 'Wrote a word',
+                          }),
                           subtitle: Text(formatWhen(a.at)),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,

@@ -13,11 +13,15 @@ class WatchView extends StatefulWidget {
     required this.template,
     required this.onNext,
     this.nextLabel = 'Trace it',
+    this.intro,
   });
 
   final LetterTemplate template;
   final VoidCallback onNext;
   final String nextLabel;
+
+  /// Spoken when the view opens; by default it names the letter or shape.
+  final String? intro;
 
   @override
   State<WatchView> createState() => _WatchViewState();
@@ -31,9 +35,11 @@ class _WatchViewState extends State<WatchView>
     duration: _timeline.total,
   )..forward();
 
-  String get _intro => widget.template.isShape
-      ? 'Watch how to draw ${widget.template.label.toLowerCase()}.'
-      : 'Watch how to write the letter ${widget.template.letter}.';
+  String get _intro =>
+      widget.intro ??
+      (widget.template.isShape
+          ? 'Watch how to draw ${widget.template.label.toLowerCase()}.'
+          : 'Watch how to write the letter ${widget.template.letter}.');
 
   @override
   void initState() {

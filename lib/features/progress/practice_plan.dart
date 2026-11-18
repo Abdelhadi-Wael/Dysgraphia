@@ -18,12 +18,13 @@ final _letterIds = teachingOrder.split('').toSet();
 /// not letters and are left out.
 Map<String, int> bestStars(History h) => bestStarsFor(h, _letterIds);
 
-/// Best copy stars for the given template ids only (letters or shapes).
+/// Best copy stars for the given template ids only (letters, shapes or
+/// words).
 Map<String, int> bestStarsFor(History h, Iterable<String> ids) {
   final wanted = ids.toSet();
   final best = <String, int>{};
   for (final a in h.attempts) {
-    if (a.kind != PracticeKind.copy || !wanted.contains(a.letter)) continue;
+    if (a.kind == PracticeKind.trace || !wanted.contains(a.letter)) continue;
     final old = best[a.letter];
     if (old == null || a.stars > old) best[a.letter] = a.stars;
   }

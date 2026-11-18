@@ -1,9 +1,10 @@
 import '../utils/time.dart';
 import 'stroke.dart';
 
-enum PracticeKind { trace, copy }
+enum PracticeKind { trace, copy, word }
 
-/// One finished, scored letter: a completed trace or one checked copy box.
+/// One finished, scored letter (a completed trace or one checked copy box)
+/// or one checked word (then [letter] is the word's id, e.g. "word-cat").
 /// Keeps the raw drawing so it can be re-scored later with better rules.
 class Attempt {
   Attempt({

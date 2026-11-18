@@ -18,6 +18,8 @@ import 'package:dysgraphia_app/features/profiles/profile_picker_page.dart';
 import 'package:dysgraphia_app/features/templates/letter_gallery_page.dart';
 import 'package:dysgraphia_app/features/templates/letter_page.dart';
 import 'package:dysgraphia_app/features/templates/warmup_shapes.dart';
+import 'package:dysgraphia_app/features/words/word_page.dart';
+import 'package:dysgraphia_app/features/words/word_templates.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -98,6 +100,12 @@ void main() {
       initialStep: LetterStep.copy,
       queue: ['warmup-zigzag'],
     ),
+    'word watch': () => const WordPage(word: 'word-lamp'),
+    'word write': () => const WordPage(
+      word: 'word-lamp',
+      initialStep: WordStep.write,
+      queue: ['word-jump'],
+    ),
     'challenge': () =>
         ChallengePage(challenge: challengeNumber(9), review: 'a'),
     'check shapes': () => AssessmentPage(tasks: [defaultAssessmentTasks[0]]),
@@ -169,6 +177,32 @@ void main() {
         await tester.tap(find.text('Check'));
         await tester.pump(const Duration(seconds: 1));
         expect(find.text('Details'), findsOneWidget);
+      });
+
+      testWidgets('writing a word works and the score card fits', (
+        tester,
+      ) async {
+        await _open(
+          tester,
+          size.value,
+          const WordPage(
+            word: 'word-lamp',
+            initialStep: WordStep.write,
+            queue: ['word-jump'],
+          ),
+        );
+        await _write(
+          tester,
+          find.byKey(const Key('word-canvas')),
+          practiceWords['word-lamp']!.drawing.shifted(0.3, 0),
+        );
+        await tester.ensureVisible(find.text('Check'));
+        await tester.pump();
+        await tester.tap(find.text('Check'));
+        await tester.pump(const Duration(seconds: 1));
+        expect(find.text('Details'), findsOneWidget);
+        expect(find.byKey(const Key('letter-3-stars-3')), findsOneWidget);
+        expect(find.text('Next word: jump'), findsOneWidget);
       });
     });
   }
