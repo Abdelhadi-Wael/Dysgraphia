@@ -144,4 +144,45 @@ void main() {
     );
     expect(_stepLabel(tester), 'Step 1 of 4 · Warm-up: Circles');
   });
+
+  testWidgets('going back a step and forward again', (tester) async {
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final attempts = <Attempt>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ChallengePage(
+          challenge: challengeNumber(2),
+          onAttempt: attempts.add,
+        ),
+      ),
+    );
+    final back = find.byKey(const Key('previous-step'));
+    expect(tester.widget<IconButton>(back).onPressed, isNull);
+
+    await _trace(tester, 'warmup-circle');
+    await tester.tap(find.text('Next: letter a'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Trace it'));
+    await tester.pumpAndSettle();
+    expect(_stepLabel(tester), 'Step 3 of 4 · Trace');
+
+    // Back to watch the letter again: the animation plays from the start.
+    await tester.tap(back);
+    await tester.pumpAndSettle();
+    expect(_stepLabel(tester), 'Step 2 of 4 · Watch');
+    await tester.tap(find.text('Trace it'));
+    await tester.pumpAndSettle();
+    expect(_stepLabel(tester), 'Step 3 of 4 · Trace');
+    expect(find.text('Start at dot 1 and follow the arrow'), findsOneWidget);
+
+    // Back to the warm-up: its earlier result stays saved.
+    await tester.tap(back);
+    await tester.pumpAndSettle();
+    await tester.tap(back);
+    await tester.pumpAndSettle();
+    expect(_stepLabel(tester), 'Step 1 of 4 · Warm-up: Circles');
+    expect(attempts.map((a) => a.letter), ['warmup-circle']);
+  });
 }
