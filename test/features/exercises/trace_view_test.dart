@@ -69,15 +69,15 @@ void main() {
     // Traced exactly on the dotted letter: full marks.
     expect(find.byKey(const Key('star-3-on')), findsOneWidget);
     expect(find.text('Great job!'), findsOneWidget);
-    expect(find.text('Shape'), findsNothing);
+    expect(find.text('Looks right'), findsNothing);
     // Details open in a panel from the bottom; the card keeps its height.
     final card = tester.getRect(find.byKey(const Key('score-tip')));
     await tester.tap(find.text('Details'));
     await tester.pumpAndSettle();
-    expect(find.text('Shape'), findsOneWidget);
+    expect(find.text('Looks right'), findsOneWidget);
     expect(find.text('100%'), findsNWidgets(4));
     expect(tester.getRect(find.byKey(const Key('score-tip'))), card);
-    Navigator.of(tester.element(find.text('Shape'))).pop();
+    Navigator.of(tester.element(find.text('Looks right'))).pop();
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Trace again'));

@@ -4,40 +4,72 @@ import '../../core/models/stroke.dart';
 import 'geometry.dart';
 
 /// The one thing to work on next, from the weakest measure.
-enum ScoreTip { none, shape, tooBig, tooSmall, tooHigh, tooLow, strokeCount }
+enum ScoreTip {
+  none,
+  looks,
+  tooBig,
+  tooSmall,
+  tooHigh,
+  tooLow,
+  strokeCount,
+  order,
+  dotLast,
+  direction,
+  roundDirection,
+  start,
+}
+
+/// What was wrong with how the letter was written, if anything. Checked in
+/// this order; only the first problem found becomes the tip.
+enum MovementIssue { none, strokeCount, order, direction, start }
 
 /// How well one written letter matches its template. Every measure is
 /// 0 (poor) to 1 (matches); see docs/scoring.md.
 class LetterScore {
   const LetterScore({
-    required this.shape,
+    required this.looks,
     required this.size,
     required this.position,
-    required this.strokes,
-    required this.shapeDistance,
+    required this.movement,
+    required this.lookDistance,
+    required this.orderedDistance,
     required this.sizeRatio,
     required this.baselineOffset,
     required this.strokeDifference,
+    required this.issue,
     required this.tip,
   });
 
-  final double shape, size, position, strokes;
+  /// Does it look like the model (however it was written)?
+  final double looks;
+  final double size, position;
+
+  /// Was it written the right way: strokes, their order, direction and
+  /// start?
+  final double movement;
 
   /// Raw values behind the measures, for reports and research.
-  final double shapeDistance; // DTW on normalised shapes
+  final double lookDistance; // order-free, on normalised shapes
+  final double orderedDistance; // DTW in writing order, for reference
   final double sizeRatio; // written height / template height
   final double baselineOffset; // line units, + = too low, - = too high
   final int strokeDifference; // written strokes - template strokes
+  final MovementIssue issue;
 
   final ScoreTip tip;
 
-  static const weights = (shape: 0.5, size: 0.2, position: 0.2, strokes: 0.1);
+  static const weights = (
+    looks: 0.45,
+    size: 0.2,
+    position: 0.2,
+    movement: 0.15,
+  );
 
   double get overall =>
-      shape * weights.shape +
+      looks * weights.looks +
       size * weights.size +
       position * weights.position +
-      strokes * weights.strokes;
+      movement * weights.movement;
 
   /// 1-3 stars. Never 0: every attempt earns something.
   int get stars => overall >= 0.85 ? 3 : (overall >= 0.6 ? 2 : 1);
@@ -45,14 +77,16 @@ class LetterScore {
   Map<String, dynamic> toJson() => {
     'overall': _r(overall),
     'stars': stars,
-    'shape': _r(shape),
+    'looks': _r(looks),
     'size': _r(size),
     'position': _r(position),
-    'strokes': _r(strokes),
-    'shapeDistance': _r(shapeDistance),
+    'movement': _r(movement),
+    'lookDistance': _r(lookDistance),
+    'orderedDistance': _r(orderedDistance),
     'sizeRatio': _r(sizeRatio),
     'baselineOffset': _r(baselineOffset),
     'strokeDifference': strokeDifference,
+    'issue': issue.name,
     'tip': tip.name,
   };
 }
@@ -64,15 +98,15 @@ double _r(double v) => (v * 1000).roundToDouble() / 1000;
 /// and noisy copies (see docs/scoring.md); tune them with real data.
 class LetterScorer {
   const LetterScorer({
-    this.shapeGood = 0.05,
-    this.shapeBad = 0.30,
+    this.looksGood = 0.05,
+    this.looksBad = 0.25,
     this.sizeZeroRatio = 2.0,
     this.positionZero = 0.25,
     this.tipBelow = 0.8,
   });
 
-  /// DTW distance that still counts as a perfect shape / that scores 0.
-  final double shapeGood, shapeBad;
+  /// Look distance that still counts as a perfect shape / that scores 0.
+  final double looksGood, looksBad;
 
   /// Size ratio (bigger or smaller) at which the size score reaches 0.
   final double sizeZeroRatio;
@@ -87,11 +121,10 @@ class LetterScorer {
   LetterScore score(Drawing written, Drawing template) {
     assert(!written.isEmpty && !template.isEmpty);
 
-    final d = dtw(
-      normalise(resampleDrawing(written)),
-      normalise(resampleDrawing(template)),
-    );
-    final shape = _clamp(1 - (d - shapeGood) / (shapeBad - shapeGood));
+    final w = normalise(resampleDrawing(written));
+    final t = normalise(resampleDrawing(template));
+    final look = lookDistance(w, t);
+    final looks = _clamp(1 - (look - looksGood) / (looksBad - looksGood));
 
     final (_, wTop, _, wBottom) = written.bounds!;
     final (_, tTop, _, tBottom) = template.bounds!;
@@ -104,20 +137,15 @@ class LetterScorer {
     final offset = wBottom - tBottom;
     final position = _clamp(1 - offset.abs() / positionZero);
 
-    final diff = written.strokeCount - template.strokeCount;
-    final strokes = switch (diff.abs()) {
-      0 => 1.0,
-      1 => 0.6,
-      _ => 0.2,
-    };
+    final m = _movement(written, template);
 
     // Tip for the weakest measure below the bar; ties go to the earlier,
     // more important one.
     final candidates = <(double, ScoreTip)>[
-      (shape, ScoreTip.shape),
+      (looks, ScoreTip.looks),
       (position, offset > 0 ? ScoreTip.tooLow : ScoreTip.tooHigh),
       (size, ratio > 1 ? ScoreTip.tooBig : ScoreTip.tooSmall),
-      (strokes, ScoreTip.strokeCount),
+      (m.score, m.tip),
     ];
     var tip = ScoreTip.none;
     var worst = tipBelow;
@@ -129,17 +157,113 @@ class LetterScorer {
     }
 
     return LetterScore(
-      shape: shape,
+      looks: looks,
       size: size,
       position: position,
-      strokes: strokes,
-      shapeDistance: d,
+      movement: m.score,
+      lookDistance: look,
+      orderedDistance: dtw(w, t),
       sizeRatio: ratio,
       baselineOffset: offset,
-      strokeDifference: diff,
+      strokeDifference: written.strokeCount - template.strokeCount,
+      issue: m.issue,
       tip: tip,
     );
   }
+
+  /// Checks how the letter was written, stroke by stroke, in a shared
+  /// normalised frame: number of strokes, then their order, then each
+  /// stroke's direction, then where round strokes start.
+  ({double score, MovementIssue issue, ScoreTip tip}) _movement(
+    Drawing written,
+    Drawing template,
+  ) {
+    final diff = written.strokeCount - template.strokeCount;
+    if (diff != 0) {
+      return (
+        score: diff.abs() == 1 ? 0.5 : 0.2,
+        issue: MovementIssue.strokeCount,
+        tip: ScoreTip.strokeCount,
+      );
+    }
+    final w = normaliseStrokes(written);
+    final t = normaliseStrokes(template);
+    final n = w.length;
+
+    // Order: does each written stroke look most like the template stroke
+    // in the same place in the order?
+    var orderWrong = false, dotFirst = false;
+    for (var i = 0; i < n; i++) {
+      final own = _strokeDistance(w[i], t[i]);
+      for (var j = 0; j < n; j++) {
+        if (j != i && _strokeDistance(w[i], t[j]) < own - 0.08) {
+          orderWrong = true;
+          if (_isDot(t[j])) dotFirst = true;
+        }
+      }
+    }
+    if (orderWrong) {
+      return (
+        score: 0.5,
+        issue: MovementIssue.order,
+        tip: dotFirst ? ScoreTip.dotLast : ScoreTip.order,
+      );
+    }
+
+    var reversed = 0, roundReversed = false, badStart = false;
+    for (var i = 0; i < n; i++) {
+      final a = w[i], b = t[i];
+      if (_isDot(a) || _isDot(b)) continue;
+      if (_isLoop(b)) {
+        final wa = signedArea(a), ta = signedArea(b);
+        if (wa.abs() > 0.02 && wa.sign != ta.sign) {
+          reversed++;
+          roundReversed = true;
+        } else if (distance(a.first, b.first) > 0.5) {
+          badStart = true;
+        }
+      } else {
+        final forward = distance(a.first, b.first) + distance(a.last, b.last);
+        final backward = distance(a.first, b.last) + distance(a.last, b.first);
+        if (forward > 0.3 && backward < forward * 0.6) reversed++;
+      }
+    }
+    if (reversed > 0) {
+      return (
+        score: _clamp(1 - 0.5 * reversed),
+        issue: MovementIssue.direction,
+        tip: roundReversed ? ScoreTip.roundDirection : ScoreTip.direction,
+      );
+    }
+    if (badStart) {
+      return (score: 0.7, issue: MovementIssue.start, tip: ScoreTip.start);
+    }
+    return (score: 1.0, issue: MovementIssue.none, tip: ScoreTip.none);
+  }
 }
+
+/// Mean distance from each point of [a] to the nearest point of [b] and
+/// back: how close two strokes are, whichever way they were drawn.
+double _strokeDistance(List<Pt> a, List<Pt> b) {
+  double oneWay(List<Pt> from, List<Pt> to) =>
+      from
+          .map((p) => to.map((q) => distance(p, q)).reduce(math.min))
+          .reduce((x, y) => x + y) /
+      from.length;
+  return (oneWay(a, b) + oneWay(b, a)) / 2;
+}
+
+double _extent(List<Pt> s) {
+  final xs = s.map((p) => p.x), ys = s.map((p) => p.y);
+  return math.max(
+    xs.reduce(math.max) - xs.reduce(math.min),
+    ys.reduce(math.max) - ys.reduce(math.min),
+  );
+}
+
+bool _isDot(List<Pt> s) => _extent(s) < 0.08;
+
+/// A stroke that ends near where it started (o, the bowl of a, b, d...).
+bool _isLoop(List<Pt> s) => distance(s.first, s.last) < 0.3 * _extent(s);
 
 double _clamp(double v) => v.clamp(0.0, 1.0);
