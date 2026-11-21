@@ -88,6 +88,57 @@ class CheckRecord {
   );
 }
 
+/// One finished round of the finger game (thumb to finger pinches).
+class FingerGameRecord {
+  FingerGameRecord({
+    required this.pattern,
+    required this.speed,
+    required this.seconds,
+    required this.hits,
+    required this.wrong,
+    required this.missed,
+    this.reactionMs,
+    DateTime? at,
+  }) : at = utcMillis(at ?? DateTime.now());
+
+  final DateTime at;
+
+  /// Settings, by name (PinchPattern / GameSpeed), and length.
+  final String pattern;
+  final String speed;
+  final int seconds;
+
+  final int hits, wrong, missed;
+
+  /// Average time from a target appearing to the right pinch.
+  final int? reactionMs;
+
+  /// The score shown to the child.
+  int get score => hits;
+
+  Map<String, dynamic> toJson() => {
+    'at': at.toIso8601String(),
+    'pattern': pattern,
+    'speed': speed,
+    'seconds': seconds,
+    'hits': hits,
+    'wrong': wrong,
+    'missed': missed,
+    'reactionMs': reactionMs,
+  };
+
+  factory FingerGameRecord.fromJson(Map<String, dynamic> j) => FingerGameRecord(
+    at: DateTime.parse(j['at'] as String),
+    pattern: j['pattern'] as String,
+    speed: j['speed'] as String,
+    seconds: (j['seconds'] as num).toInt(),
+    hits: (j['hits'] as num).toInt(),
+    wrong: (j['wrong'] as num).toInt(),
+    missed: (j['missed'] as num).toInt(),
+    reactionMs: (j['reactionMs'] as num?)?.toInt(),
+  );
+}
+
 /// A finished challenge on the writing journey.
 class ChallengeRecord {
   ChallengeRecord({required this.number, required this.stars, DateTime? at})
@@ -118,24 +169,29 @@ class History {
     List<Attempt>? attempts,
     List<CheckRecord>? checks,
     List<ChallengeRecord>? challenges,
+    List<FingerGameRecord>? games,
   }) : attempts = List.unmodifiable(attempts ?? const []),
        checks = List.unmodifiable(checks ?? const []),
-       challenges = List.unmodifiable(challenges ?? const []);
+       challenges = List.unmodifiable(challenges ?? const []),
+       games = List.unmodifiable(games ?? const []);
 
   static final empty = History();
 
   final List<Attempt> attempts;
   final List<CheckRecord> checks;
   final List<ChallengeRecord> challenges;
+  final List<FingerGameRecord> games;
 
   History _copy({
     List<Attempt>? attempts,
     List<CheckRecord>? checks,
     List<ChallengeRecord>? challenges,
+    List<FingerGameRecord>? games,
   }) => History(
     attempts: attempts ?? this.attempts,
     checks: checks ?? this.checks,
     challenges: challenges ?? this.challenges,
+    games: games ?? this.games,
   );
 
   History withAttempt(Attempt a) => _copy(attempts: [...attempts, a]);
@@ -145,10 +201,13 @@ class History {
   History withChallenge(ChallengeRecord c) =>
       _copy(challenges: [...challenges, c]);
 
+  History withGame(FingerGameRecord g) => _copy(games: [...games, g]);
+
   Map<String, dynamic> toJson() => {
     'attempts': [for (final a in attempts) a.toJson()],
     'checks': [for (final c in checks) c.toJson()],
     'challenges': [for (final c in challenges) c.toJson()],
+    'games': [for (final g in games) g.toJson()],
   };
 
   factory History.fromJson(Map<String, dynamic> j) => History(
@@ -163,6 +222,10 @@ class History {
     challenges: [
       for (final c in (j['challenges'] as List? ?? const []))
         ChallengeRecord.fromJson(c as Map<String, dynamic>),
+    ],
+    games: [
+      for (final g in (j['games'] as List? ?? const []))
+        FingerGameRecord.fromJson(g as Map<String, dynamic>),
     ],
   );
 }

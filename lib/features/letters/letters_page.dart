@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/state/app_data.dart';
+import '../fingers/finger_game_page.dart';
 import '../progress/practice_plan.dart';
 import '../templates/letter_page.dart';
 import '../templates/warmup_shapes.dart';
@@ -25,6 +26,22 @@ void openLetter(
     ),
   ),
 );
+
+/// Opens the finger game for the current profile; rounds are saved.
+void openFingerGame(BuildContext context, WidgetRef ref) =>
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => FingerGamePage(
+          onFinished: ref.read(appDataProvider.notifier).addFingerGame,
+          bestScore: (s) => bestFingerScore(
+            ref.read(appDataProvider).requireValue.history,
+            pattern: s.pattern.name,
+            speed: s.speed.name,
+            seconds: s.length.inSeconds,
+          ),
+        ),
+      ),
+    );
 
 /// Opens a word (id "word-cat") for the current profile; results are saved.
 void openWord(
@@ -74,6 +91,20 @@ class LettersPage extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 4),
+          Card(
+            key: const Key('finger-game-card'),
+            color: Theme.of(context).colorScheme.primaryContainer,
+            child: ListTile(
+              leading: const Icon(Icons.back_hand_outlined, size: 32),
+              title: const Text('Finger taps'),
+              subtitle: const Text(
+                'Touch your thumb to each finger. Uses the camera.',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => openFingerGame(context, ref),
+            ),
+          ),
+          const SizedBox(height: 8),
           LetterStarsGrid(
             templates: warmUpShapes.values.toList(),
             best: bestStarsFor(history, shapeIds),
