@@ -9,7 +9,12 @@ final progressStoreProvider = Provider<ProgressStore>((ref) => ProgressStore());
 
 /// The profiles on this device, who is practising now, and their history.
 class AppData {
-  const AppData({required this.profiles, this.current, required this.history});
+  const AppData({
+    required this.profiles,
+    this.current,
+    required this.history,
+    this.dev = const DevOptions(),
+  });
 
   final List<Profile> profiles;
 
@@ -18,6 +23,20 @@ class AppData {
 
   /// History of [current]; empty when nobody is chosen.
   final History history;
+
+  final DevOptions dev;
+
+  AppData copyWith({
+    List<Profile>? profiles,
+    Profile? Function()? current,
+    History? history,
+    DevOptions? dev,
+  }) => AppData(
+    profiles: profiles ?? this.profiles,
+    current: current == null ? this.current : current(),
+    history: history ?? this.history,
+    dev: dev ?? this.dev,
+  );
 }
 
 /// Loads and changes [AppData]. Every change is saved before the state
@@ -37,6 +56,7 @@ class AppDataNotifier extends AsyncNotifier<AppData> {
       history: current == null
           ? History.empty
           : await _store.loadHistory(current.id),
+      dev: await _store.loadDevOptions(),
     );
   }
 
@@ -48,9 +68,7 @@ class AppDataNotifier extends AsyncNotifier<AppData> {
     final history = profile == null
         ? History.empty
         : await _store.loadHistory(profile.id);
-    state = AsyncData(
-      AppData(profiles: _data.profiles, current: profile, history: history),
-    );
+    state = AsyncData(_data.copyWith(current: () => profile, history: history));
   }
 
   /// Adds a profile and switches to it.
@@ -58,7 +76,11 @@ class AppDataNotifier extends AsyncNotifier<AppData> {
     final profiles = [..._data.profiles, p];
     await _store.saveProfiles(profiles);
     state = AsyncData(
-      AppData(profiles: profiles, current: p, history: History.empty),
+      _data.copyWith(
+        profiles: profiles,
+        current: () => p,
+        history: History.empty,
+      ),
     );
   }
 
@@ -68,10 +90,9 @@ class AppDataNotifier extends AsyncNotifier<AppData> {
     ];
     await _store.saveProfiles(profiles);
     state = AsyncData(
-      AppData(
+      _data.copyWith(
         profiles: profiles,
-        current: _data.current?.id == p.id ? p : _data.current,
-        history: _data.history,
+        current: () => _data.current?.id == p.id ? p : _data.current,
       ),
     );
   }
@@ -83,12 +104,17 @@ class AppDataNotifier extends AsyncNotifier<AppData> {
     await _store.deleteHistory(id);
     final wasCurrent = _data.current?.id == id;
     state = AsyncData(
-      AppData(
+      _data.copyWith(
         profiles: profiles,
-        current: wasCurrent ? null : _data.current,
+        current: () => wasCurrent ? null : _data.current,
         history: wasCurrent ? History.empty : _data.history,
       ),
     );
+  }
+
+  Future<void> setDevOptions(DevOptions o) async {
+    await _store.saveDevOptions(o);
+    state = AsyncData(_data.copyWith(dev: o));
   }
 
   Future<void> addAttempt(Attempt a) =>
@@ -104,9 +130,7 @@ class AppDataNotifier extends AsyncNotifier<AppData> {
     final current = _data.current;
     if (current == null) return; // nobody to save for
     await _store.saveHistory(current.id, h);
-    state = AsyncData(
-      AppData(profiles: _data.profiles, current: current, history: h),
-    );
+    state = AsyncData(_data.copyWith(history: h));
   }
 }
 

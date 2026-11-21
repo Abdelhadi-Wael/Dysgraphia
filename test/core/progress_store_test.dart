@@ -64,6 +64,12 @@ void main() {
     expect(await store.loadHistory('p2'), isA<History>());
   });
 
+  test('developer options are off until saved, then remembered', () async {
+    expect((await store.loadDevOptions()).unlockAll, isFalse);
+    await store.saveDevOptions(const DevOptions(unlockAll: true));
+    expect((await store.loadDevOptions()).unlockAll, isTrue);
+  });
+
   test('deleting a history removes its file', () async {
     await store.saveHistory('p1', History().withAttempt(attempt('a', 2)));
     await store.deleteHistory('p1');

@@ -1,23 +1,27 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/state/app_data.dart';
+import '../../core/storage/progress_store.dart';
 import '../assessment/assessment_page.dart';
 import '../canvas/canvas_playground_page.dart';
 import '../export/drawing_exporter.dart';
 import '../templates/letter_gallery_page.dart';
 
 /// Tools for development and research, kept out of the way of normal use
-/// (Settings → Developer tools). Nothing done here is saved to a profile.
-class DevToolsPage extends StatefulWidget {
+/// (Settings → Developer tools). Nothing done here is saved to a profile;
+/// the options at the top apply to the whole device.
+class DevToolsPage extends ConsumerStatefulWidget {
   const DevToolsPage({super.key, this.exporter});
 
   /// Passed on to the screens that save files; tests use a temp folder.
   final DrawingExporter? exporter;
 
   @override
-  State<DevToolsPage> createState() => _DevToolsPageState();
+  ConsumerState<DevToolsPage> createState() => _DevToolsPageState();
 }
 
-class _DevToolsPageState extends State<DevToolsPage> {
+class _DevToolsPageState extends ConsumerState<DevToolsPage> {
   final _participant = TextEditingController();
 
   @override
@@ -36,6 +40,21 @@ class _DevToolsPageState extends State<DevToolsPage> {
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 8),
         children: [
+          if (ref.watch(appDataProvider).value case final data?)
+            SwitchListTile(
+              key: const Key('unlock-all'),
+              secondary: const Icon(Icons.lock_open),
+              title: const Text('Unlock all challenges'),
+              subtitle: const Text(
+                'Open any journey challenge without finishing the ones '
+                'before it. For testing and demos.',
+              ),
+              value: data.dev.unlockAll,
+              onChanged: (v) => ref
+                  .read(appDataProvider.notifier)
+                  .setDevOptions(DevOptions(unlockAll: v)),
+            ),
+          const Divider(),
           ListTile(
             leading: const Icon(Icons.gesture),
             title: const Text('Canvas test'),
