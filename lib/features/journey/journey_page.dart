@@ -6,6 +6,7 @@ import '../../core/models/profile.dart';
 import '../../core/state/app_data.dart';
 import '../profiles/profile_avatar.dart';
 import '../progress/practice_plan.dart';
+import '../words/word_templates.dart';
 import 'challenge_page.dart';
 import 'journey.dart';
 
@@ -313,11 +314,22 @@ class _PathRow extends ConsumerWidget {
             ),
             child: Center(
               child: unlocked
-                  ? Text(
-                      challenge.letter,
-                      style:
-                          (isCurrent ? text.displaySmall : text.headlineMedium)
-                              ?.copyWith(color: fg),
+                  // Words shrink to fit the circle; letters keep their size.
+                  ? Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          challenge.isWords
+                              ? practiceWordText(challenge.words.first)
+                              : challenge.letter!,
+                          style:
+                              (isCurrent
+                                      ? text.displaySmall
+                                      : text.headlineMedium)
+                                  ?.copyWith(color: fg),
+                        ),
+                      ),
                     )
                   : Icon(Icons.lock_outline, color: fg),
             ),

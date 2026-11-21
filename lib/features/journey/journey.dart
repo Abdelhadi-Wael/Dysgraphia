@@ -1,5 +1,6 @@
 import '../../core/models/history.dart';
 import '../progress/practice_plan.dart';
+import '../words/word_templates.dart';
 
 /// A stage of the writing journey: letters that share movements.
 class JourneyLevel {
@@ -8,35 +9,59 @@ class JourneyLevel {
   final String id;
   final String name;
 
-  /// New letters introduced in this level, in order.
+  /// New letters introduced in this level, in order (empty for words).
   final String letters;
 }
 
-/// The three levels follow [teachingOrder]: round letters, then straight
-/// lines and arches, then slants and the rest.
+/// After the letters: putting them together in words.
+const wordsLevel = JourneyLevel('D', 'Words', '');
+
+/// Words practised in each challenge of [wordsLevel], two at a time, in the
+/// order of [wordGroups] (easiest letters first).
+final List<List<String>> wordChallenges = [
+  for (final g in wordGroups)
+    for (var i = 0; i < g.words.length; i += 2)
+      [for (final w in g.words.skip(i).take(2)) 'word-$w'],
+];
+
+/// The letter levels follow [teachingOrder]: round letters, then straight
+/// lines and arches, then slants and the rest. Then words.
 const journeyLevels = [
   JourneyLevel('A', 'Round letters', 'cadgoq'),
   JourneyLevel('B', 'Lines and arches', 'litnmhrbp'),
   JourneyLevel('C', 'Slants and more', 'uyvwejkfsxz'),
+  wordsLevel,
 ];
 
-/// One stop on the journey: a short session that warms up with a shape,
-/// teaches one new letter and reviews an earlier one.
+/// One stop on the journey: a short session. A letter challenge warms up
+/// with a shape, teaches one new letter and reviews an earlier one; a word
+/// challenge writes two words and reviews a letter.
 class Challenge {
   const Challenge({
     required this.number,
     required this.level,
-    required this.letter,
-    required this.warmUp,
+    this.letter,
+    this.warmUp,
+    this.words = const [],
   });
 
   /// 1-based, across all levels.
   final int number;
   final JourneyLevel level;
-  final String letter;
+
+  /// The new letter, for a letter challenge.
+  final String? letter;
 
   /// Id of the warm-up shape that trains this letter's main movement.
-  final String warmUp;
+  final String? warmUp;
+
+  /// Word ids ("word-cat"), for a word challenge.
+  final List<String> words;
+
+  bool get isWords => words.isNotEmpty;
+
+  /// What the challenge is about, in a few characters: "a" or "go, dog".
+  String get name => letter ?? words.map(practiceWordText).join(', ');
 }
 
 /// Warm-up shape for each letter: the movement it relies on most.
@@ -69,22 +94,26 @@ const _warmUpFor = {
   'z': 'warmup-zigzag',
 };
 
-/// All challenges in order, one per letter.
-final List<Challenge> journey =
-    [
-          for (final level in journeyLevels)
-            for (final l in level.letters.split('')) (level, l),
-        ].indexed
-        .map((e) {
-          final (i, (level, letter)) = e;
-          return Challenge(
-            number: i + 1,
-            level: level,
-            letter: letter,
-            warmUp: _warmUpFor[letter]!,
-          );
-        })
-        .toList(growable: false);
+/// All challenges in order: one per letter, then the word challenges.
+final List<Challenge> journey = () {
+  final out = <Challenge>[];
+  for (final level in journeyLevels) {
+    for (final l in level.letters.split('').where((l) => l.isNotEmpty)) {
+      out.add(
+        Challenge(
+          number: out.length + 1,
+          level: level,
+          letter: l,
+          warmUp: _warmUpFor[l]!,
+        ),
+      );
+    }
+  }
+  for (final words in wordChallenges) {
+    out.add(Challenge(number: out.length + 1, level: wordsLevel, words: words));
+  }
+  return List<Challenge>.unmodifiable(out);
+}();
 
 Challenge challengeNumber(int n) => journey[n - 1];
 
@@ -124,7 +153,7 @@ int? challengeStars(History h, int n) {
 String? reviewLetter(History h, Challenge c) {
   final earlier = [
     for (final e in journey)
-      if (e.number < c.number) e.letter,
+      if (e.number < c.number && e.letter != null) e.letter!,
   ];
   if (earlier.isEmpty) return null;
   final best = bestStars(h);
