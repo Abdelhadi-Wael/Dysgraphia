@@ -6,8 +6,10 @@ import '../../core/state/app_data.dart';
 import '../letters/letter_stars_grid.dart';
 import '../letters/letters_page.dart';
 import 'practice_plan.dart';
+import 'skill_charts.dart';
+import 'skill_trends.dart';
 
-/// Summary, best stars per letter and recent practice. Charts come later.
+/// Summary, skills over time, best stars per letter and recent practice.
 class ProgressPage extends ConsumerWidget {
   const ProgressPage({super.key});
 
@@ -52,6 +54,10 @@ class ProgressPage extends ConsumerWidget {
                   ),
                 ],
               ),
+              const SizedBox(height: 24),
+              Text('Skills', style: text.titleLarge),
+              const SizedBox(height: 8),
+              SkillCharts(trends: skillTrends(h)),
               const SizedBox(height: 24),
               Text('Letters', style: text.titleLarge),
               const SizedBox(height: 8),
