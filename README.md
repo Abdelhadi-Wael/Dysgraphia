@@ -1,9 +1,21 @@
-# dysgraphia_app
+# What is this?
 
-Handwriting practice and dysgraphia support app
+Prototype app for handwriting practice for children with dysgraphia.
 
-## TODO
+## Build & run
 
-## Development
+```bash
+flutter pub get
+flutter build apk --release --split-per-abi
+flutter build linux --release
+```
 
-- Checks and builds (pre-commit hook, CI, APK releases): [docs/ci.md](docs/ci.md)
+```bash
+flutter run
+```
+
+## Docs
+
+- [Stroke format](docs/stroke-format.md)
+- [Scoring](docs/scoring.md)
+- [CI and builds](docs/ci.md)
