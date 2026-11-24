@@ -1,6 +1,6 @@
 # What is this?
 
-Prototype app for handwriting practice for children with dysgraphia.
+Prototype app for handwriting practice and for children with dysgraphia.
 
 ## Build & run
 
